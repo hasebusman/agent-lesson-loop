@@ -39,7 +39,7 @@ export type Lesson = {
 
 const secretPatterns = [
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/i,
-  /\b(?:sk-|ghp_|github_pat_|AKIA)[A-Za-z0-9_-]{12,}\b/,
+  /\b(?:sk-|gh[pousr]_|github_pat_|AKIA)[A-Za-z0-9_-]{12,}\b/,
   /\b(?:password|secret|api[_ -]?key|access[_ -]?token)\s*[:=]\s*\S+/i,
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i,
   /https?:\/\/[^\s/@]+:[^\s/@]+@/i,

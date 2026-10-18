@@ -6,6 +6,8 @@
 - Distinguished human review, developer-reported outcomes, and explicitly observed command checks. Check output is discarded; failures and unknown results remain visible.
 - Added pending-revision field diffs and explicit platform/dependency version bounds with unknown-context abstention.
 - Added concurrent revision, backup restoration, and output-canary regression checks.
+- Published the Apache-2.0 source repository, passed hosted CI on three operating systems, and enabled private vulnerability reporting and dependency update checks.
+- Expanded synthetic privacy canaries to the GitHub OAuth and service token families.
 
 ## 0.1.0 — 2026-10-18
 

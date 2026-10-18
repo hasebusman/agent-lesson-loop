@@ -2,7 +2,7 @@
 
 ## Reporting
 
-For a suspected vulnerability, do not open a public issue with a working exploit or secret. Contact the repository owner privately through the hosting provider's private vulnerability reporting channel if it is enabled; otherwise request a private contact channel without including exploit details. There is no security SLA for this early release.
+For a suspected vulnerability, do not open a public issue with a working exploit or secret. Use [private vulnerability reporting](https://github.com/hasebusman/agent-lesson-loop/security/advisories/new). There is no security SLA for this early release.
 
 ## Boundaries
 

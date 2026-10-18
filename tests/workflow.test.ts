@@ -521,7 +521,14 @@ test('Claude hook does not initialize an absent store', () => {
 
 test('secret canaries cannot be captured and tampered stored content is suppressed', () => {
   const f = fixture();
-  const canaries = ['password=topsecret', 'ghp_abcdefghijklmnopqrst1234567890', 'person@example.com', '-----BEGIN PRIVATE KEY-----'];
+  const canaries = [
+    'password=topsecret',
+    'ghp_abcdefghijklmnopqrst1234567890',
+    'gho_abcdefghijklmnopqrst1234567890',
+    'ghs_abcdefghijklmnopqrst1234567890',
+    'person@example.com',
+    '-----BEGIN PRIVATE KEY-----',
+  ];
   for (const canary of canaries) {
     const result = run(f.env, 'capture', '--project', f.a, '--title', 'Secret test',
       '--lesson', canary, '--when', 'login', '--verify', 'Check');
