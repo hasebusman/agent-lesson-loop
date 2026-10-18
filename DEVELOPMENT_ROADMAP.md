@@ -10,7 +10,7 @@ For each change: state the user-visible behavior and trust boundary, compare the
 
 | Work | Why now | Done when |
 |---|---|---|
-| Version this directory in Git and run pinned-action CI on macOS, Linux, and Windows | Platform claims need hosted logs. GitHub recommends limiting workflow token permissions and pinning action dependencies. | Done: [three hosted jobs](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39164292043) passed on commit `7b8337a88811e29165fe53d07b74eb9d5fee53f1` with Node 24.22.0. |
+| Version this directory in Git and run pinned-action CI on macOS, Linux, and Windows | Platform claims need hosted logs. GitHub recommends limiting workflow token permissions and pinning action dependencies. | Done: [three hosted jobs](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39165016739) passed on commit `4936cda535df712672451bb0cf9e85438e0899da` with Node 24.22.0. |
 | Validate the portable skill with the Agent Skills reference validator and then invoke it manually in three real agent hosts | The [specification](https://agentskills.io/specification) provides a validator, while static format validity does not prove discovery or correct behavior in a host. | Validator output, tool version/commit, and three versioned host smoke records show lookup, suppression, and unchanged source files. |
 | Record architecture decisions and host capability contracts | The current proposal has alternatives, but a future adapter needs an explicit, testable contract before it can safely consume messages or write user settings. | ADRs cover storage, trust/approval, retrieval, and each qualified host; fixtures contain exact observed payloads and output behavior. |
 
