@@ -1,0 +1,23 @@
+{
+  "corpus": "synthetic-subtask-v1",
+  "casesPerVariant": 10,
+  "generic": {
+    "truePositive": 5,
+    "falsePositive": 5,
+    "falseNegative": 0,
+    "correctSuppression": 0,
+    "precision": 0.5,
+    "recall": 1
+  },
+  "requiredContext": {
+    "truePositive": 5,
+    "falsePositive": 0,
+    "falseNegative": 0,
+    "correctSuppression": 5,
+    "precision": 1,
+    "recall": 1
+  },
+  "runtime": "v24.22.0",
+  "platform": "darwin",
+  "limitations": "Constructed same-word/different-subtask examples; retrieval only, no coding outcome or natural-language generalization measured."
+}

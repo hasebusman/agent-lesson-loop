@@ -1,0 +1,24 @@
+{
+  "name": "agent-lesson-lab",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "bin": {
+    "lessonlab": "./bin/lessonlab.ts"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "tsc --noEmit",
+    "eval": "node evals/run.ts",
+    "eval:compare": "node evals/compare.ts",
+    "eval:scale": "node evals/scale.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}

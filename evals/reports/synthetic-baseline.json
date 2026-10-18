@@ -1,0 +1,28 @@
+{
+  "corpus": "synthetic-v1",
+  "cases": 30,
+  "groups": {
+    "relevant_mobile": 15,
+    "expired_version": 5,
+    "explicit_exception": 5,
+    "other_project": 5
+  },
+  "retrieval": {
+    "truePositive": 15,
+    "falsePositive": 0,
+    "falseNegative": 0,
+    "correctSuppression": 15,
+    "negativeCases": 15,
+    "precision": 1,
+    "recall": 1,
+    "suppressionRate": 1
+  },
+  "lookupMs": {
+    "p50": 0.07033300000000509,
+    "p95": 0.11029199999998696
+  },
+  "maxContextChars": 354,
+  "runtime": "v24.22.0",
+  "platform": "darwin",
+  "limitations": "Synthetic retrieval only; no model coding outcome or host runtime was measured."
+}

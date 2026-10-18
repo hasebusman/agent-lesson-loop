@@ -1,0 +1,12 @@
+{
+  "corpus": "synthetic-scale",
+  "lessons": 10000,
+  "queries": 50,
+  "setupMs": 10379.546959,
+  "lookupMs": {
+    "p50": 0.06779199999982666,
+    "p95": 0.09479199999987031
+  },
+  "runtime": "v24.22.0",
+  "platform": "darwin"
+}
