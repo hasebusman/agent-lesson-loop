@@ -9,7 +9,7 @@ Checked against the [project architecture and release gates](agent-learning-syst
 - [x] Human review, developer-reported outcomes, and explicitly run command results have distinct labels; check output is discarded.
 - [x] Portable skill passes the Agent Skills format validator; optional Claude lookup hook passes local fixture tests.
 - [x] Hosted CI passed on macOS, Linux, and Windows with Node 24.22.0 ([run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39164292043)).
-- [ ] Three real manual-skill hosts and live Claude CLI/IDE behavior are verified.
+- [ ] Three real manual-skill hosts and live Claude CLI/IDE behavior are verified. One isolated Codex CLI 0.145.0 smoke run selected and suppressed the expected synthetic lesson; two other hosts and automatic skill discovery remain unverified.
 - [ ] Real correction data, a coding-outcome A/B study, and the public-beta safety/performance gates are complete.
 
 The repository is [public under hasebusman](https://github.com/hasebusman/agent-lesson-loop). The v0.1 archive and consented real corrections are unavailable. Phase 6 research options are deferred choices, not missing MVP features.
@@ -38,9 +38,9 @@ The repository is [public under hasebusman](https://github.com/hasebusman/agent-
 
 ## Phase 2 — portable skill and manual workflow: implemented, gate unverified
 
-- [x] Provide a portable [Agent Skill](skills/learn-from-corrections/SKILL.md), manual capture/review/approve workflow, and CLI `search`/`explain`; no hook or collection is enabled by default.
+- [x] Provide a portable [Agent Skill](skills/learn-from-corrections/SKILL.md), manual capture/review/approve workflow, and CLI `search`/`explain`; no hook or collection is enabled by default. Lookup, review, history, doctor, and export now open the store read-only.
 - [x] Run the Agent Skills reference validator. `skills-ref validate skills/learn-from-corrections` passed on 2026-10-19 using reference commit `69ef37e9424c0a7ea9dd2293b559e43ec8176379`; this checks format, not host behavior.
-- [ ] Manually invoke the skill in at least three real coding agents, recording host versions and whether source repositories remain unchanged. Local fixture tests cover source-file non-modification, not three host sessions.
+- [ ] Manually invoke the skill in at least three real coding agents, recording host versions and whether source repositories remain unchanged. An explicit Codex CLI 0.145.0 run in a read-only sandbox used `search`/`explain` correctly with synthetic data and did not edit the fixture repository. Automatic skill selection and two other hosts remain unverified.
 
 ## Phase 3 — opt-in adapters: partial
 
@@ -79,4 +79,4 @@ The evidence gates, approach comparisons, and acceptance criteria are in the [de
 3. If a v0.1 archive becomes available, verify and import its actual format. If consented real corrections become available, freeze an A/B study and measure outcomes; otherwise make no compatibility or effectiveness claim.
 4. Qualify Cursor and further adapters only after their contracts and smoke tests are repeatable. Complete the beta security/release review after the evidence gates pass.
 
-**Proof for this audit:** The full 30/30 suite, `npm run check`, `npm run eval`, and `npm run eval:compare` passed locally on macOS with Node 24.22.0 on 2026-10-19. The [hosted CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39164292043) passed the same code on three operating systems. The Agent Skills reference validator passed after the skill change. The checked-in evaluation reports are synthetic reference runs; no live agent-host or coding-outcome result is implied.
+**Proof for this audit:** The full 32/32 suite, `npm run check`, `npm run eval`, and `npm run eval:compare` passed locally on macOS with Node 24.22.0 on 2026-10-19. The [hosted CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39164292043) passed the prior 30-test code on three operating systems; the read-only CLI change still needs a hosted run. One Codex CLI smoke run confirmed selection and suppression in a read-only sandbox. The Agent Skills reference validator passed after the skill change. The checked-in evaluation reports are synthetic reference runs; no coding-outcome result is implied.

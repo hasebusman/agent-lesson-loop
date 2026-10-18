@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -457,6 +457,8 @@ test('v1 store migrates transactionally and keeps a private backup', () => {
   db.prepare('INSERT INTO audit(lesson_id,revision,action,occurred_at) VALUES (?,?,?,?)').run(id, 2, 'approved', old.approvedAt);
   db.prepare('INSERT INTO lesson_fts(id,title,lesson,triggers) VALUES (?,?,?,?)').run(id, old.title, old.lesson, 'login');
   db.close();
+  assert.match(run(f.env, 'search', '--project', f.a, '--task', 'Fix login').stderr, /explicit CLI migration/);
+  ok(run(f.env, 'init'));
   assert.equal(JSON.parse(ok(run(f.env, 'doctor'))).schema, 2);
   assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix login')), /Old login lesson/);
   const backups = readdirSync(join(f.root, 'data', 'backups'));
@@ -465,6 +467,7 @@ test('v1 store migrates transactionally and keeps a private backup', () => {
   mkdirSync(restoredHome);
   copyFileSync(join(f.root, 'data', 'backups', backups[0]), join(restoredHome, 'lessons.sqlite'));
   const restoredEnv = { ...f.env, LESSONLAB_HOME: restoredHome };
+  ok(run(restoredEnv, 'init'));
   assert.equal(JSON.parse(ok(run(restoredEnv, 'doctor'))).schema, 2);
   assert.match(ok(run(restoredEnv, 'search', '--project', f.a, '--task', 'Fix login')), /Old login lesson/);
 });
@@ -481,6 +484,7 @@ test('Claude integration previews, installs idempotently, and removes only its o
   const installed = JSON.parse(readFileSync(config, 'utf8'));
   assert.equal(installed.hooks.UserPromptSubmit.length, 1);
   assert.deepEqual(installed.hooks.Stop, original.hooks.Stop);
+  ok(run(f.env, 'init'));
   assert.equal(JSON.parse(ok(run(f.env, 'doctor', '--host', 'claude', '--config', config))).claude.installed, true);
   assert.equal(JSON.parse(ok(run(f.env, 'uninstall', 'claude', '--config', config))).changed, true);
   ok(run(f.env, 'uninstall', 'claude', '--config', config, '--yes'));
@@ -517,6 +521,41 @@ test('Claude hook does not initialize an absent store', () => {
   assert.equal(call.status, 0);
   assert.equal(call.stdout, '');
   assert.equal(existsSync(join(f.root, 'data')), false);
+});
+
+test('read-only CLI lookup does not create an absent store', () => {
+  const f = fixture();
+  assert.equal(run(f.env, 'search', '--project', f.a, '--task', 'Fix login').status, 1);
+  assert.equal(run(f.env, 'doctor').status, 1);
+  assert.equal(existsSync(join(f.root, 'data')), false);
+});
+
+test('lookup and review commands work without store write permission', { skip: process.platform === 'win32' }, () => {
+  const f = fixture();
+  const draft = ok(run(f.env, 'capture', '--project', f.a, '--title', 'Keep login screen',
+    '--lesson', 'Preserve the login screen.', '--when', 'login', '--except', 'redesign', '--verify', 'Inspect login'));
+  const id = draft.match(/[0-9a-f-]{36}/)![0];
+  ok(run(f.env, 'approve', id, '--project', f.a));
+  ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix login'));
+  const directory = join(f.root, 'data');
+  const database = join(directory, 'lessons.sqlite');
+  chmodSync(directory, 0o500);
+  chmodSync(database, 0o400);
+  try {
+    assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix login')), /Keep login screen/);
+    assert.match(ok(run(f.env, 'explain', '--project', f.a, '--task', 'Redesign login')), /exception matched/);
+    assert.equal(JSON.parse(ok(run(f.env, 'review', id, '--project', f.a))).title, 'Keep login screen');
+    assert.equal(JSON.parse(ok(run(f.env, 'history', id, '--project', f.a))).length, 2);
+    const output = join(f.root, 'readonly-store-export.json');
+    ok(run(f.env, 'export', '--project', f.a, '--output', output));
+    assert.equal(JSON.parse(readFileSync(output, 'utf8')).lessons.length, 1);
+    assert.equal(JSON.parse(ok(run(f.env, 'doctor'))).integrity, 'ok');
+    assert.equal(statSync(directory).mode & 0o777, 0o500);
+    assert.equal(statSync(database).mode & 0o777, 0o400);
+  } finally {
+    chmodSync(directory, 0o700);
+    chmodSync(database, 0o600);
+  }
 });
 
 test('secret canaries cannot be captured and tampered stored content is suppressed', () => {

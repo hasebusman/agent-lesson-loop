@@ -2,10 +2,10 @@
 import { spawnSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { arch, platform } from 'node:os';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { projectIdentity } from '../src/project.ts';
 import { dependencyName, lessonEnvironment, newLesson, parseTerms, platformName, reviewDiff, safeText, validExpiry, type LessonScope } from '../src/model.ts';
-import { activeLesson, backupDatabase, changeStatus, currentLesson, deleteAll, deleteLesson, exportProject, history, insertLesson, integrity, invalidRecordCount, isEnabled, openStore, projectLessons, proposeRevision, recordEvidence, rollback, setEnabled } from '../src/store.ts';
+import { activeLesson, backupDatabase, changeStatus, currentLesson, dataDirectory, deleteAll, deleteLesson, exportProject, history, insertLesson, integrity, invalidRecordCount, isEnabled, openReadStore, openStore, projectLessons, proposeRevision, recordEvidence, rollback, setEnabled } from '../src/store.ts';
 import { explain, render, selected, type TaskEnvironment } from '../src/retrieve.ts';
 import { changeClaudeIntegration, claudeIntegration } from '../src/integrations.ts';
 
@@ -99,7 +99,10 @@ function main() {
     console.log(JSON.stringify(changeClaudeIntegration(command === 'integrate' ? 'install' : 'uninstall', flags.get('--config') as string | undefined, !flags.has('--yes')), null, 2));
     return;
   }
-  const { db, path } = openStore();
+  const readOnly = ['search', 'explain', 'review', 'history', 'doctor', 'export'].includes(command);
+  const { db, path } = readOnly
+    ? { db: openReadStore(), path: join(dataDirectory(), 'lessons.sqlite') }
+    : openStore();
   try {
     if (command === 'init') { console.log(`Local store ready: ${path}`); return; }
     if (command === 'backup') { console.log(`Backup saved: ${backupDatabase(db)}`); return; }

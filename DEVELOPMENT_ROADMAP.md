@@ -18,6 +18,8 @@ For each change: state the user-visible behavior and trust boundary, compare the
 
 An isolated smoke attempt with installed Claude Code CLI 1.0.90 reached `Invalid API key` before a model request; it did not establish hook injection. The adapter's `command` plus `args` form and `additionalContext` output match the current [hook reference](https://code.claude.com/docs/en/hooks), but that reference is newer than the installed CLI. Repeat with an authenticated, versioned host before marking it supported.
 
+One explicit Codex CLI 0.145.0 run in a temporary read-only sandbox selected an approved synthetic lesson for an auth fix, suppressed it for a redesign, and left source files unchanged. The first run revealed that CLI lookup commands used write-capable store setup. They now use the read-only opener, with a permission-bound regression test. This is one host smoke result, not automatic skill-discovery or coding-outcome evidence. The [OpenAI Docs skill evaluation guidance](https://developers.openai.com/blog/eval-skills) supports checking trace commands and artifacts rather than scoring only final wording.
+
 The [constructed skill behavior cases](evals/skill-behavior.md) now separate correction capture from ordinary work and pasted transcripts. They are a manual review set, not a passed host evaluation.
 
 ## Stage 2 — close core safety and correctness gaps

@@ -8,6 +8,7 @@
 - Added concurrent revision, backup restoration, and output-canary regression checks.
 - Published the Apache-2.0 source repository, passed hosted CI on three operating systems, and enabled private vulnerability reporting and dependency update checks.
 - Expanded synthetic privacy canaries to the GitHub OAuth and service token families.
+- Opened lookup and review commands through the read-only store path after an isolated Codex CLI smoke run exposed a sandbox permission failure.
 
 ## 0.1.0 — 2026-10-18
 
