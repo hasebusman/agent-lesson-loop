@@ -8,7 +8,7 @@ Checked against the [project architecture and release gates](agent-learning-syst
 - [x] A project-specific preference stays in its repository; it is not written into the portable skill or returned in another repository's search.
 - [x] Human review, developer-reported outcomes, and explicitly run command results have distinct labels; check output is discarded.
 - [x] Portable skill passes the Agent Skills format validator; optional Claude lookup hook passes local fixture tests.
-- [x] Hosted CI passed on macOS, Linux, and Windows with Node 24.22.0 ([run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39163824283)).
+- [x] Hosted CI passed on macOS, Linux, and Windows with Node 24.22.0 ([run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39164292043)).
 - [ ] Three real manual-skill hosts and live Claude CLI/IDE behavior are verified.
 - [ ] Real correction data, a coding-outcome A/B study, and the public-beta safety/performance gates are complete.
 
@@ -34,7 +34,7 @@ The repository is [public under hasebusman](https://github.com/hasebusman/agent-
 - [x] Add explicit platform/dependency version bounds with conservative abstention for missing, mismatched, or unsupported versions ([ADR 0003](docs/adr/0003-explicit-version-context.md), [tests](tests/workflow.test.ts)).
 - [ ] Resolve semantic conflicts and dedupe beyond identical applicability. No semantic conflict detector is claimed yet.
 - [x] Show changed lesson content and scope between an active revision and pending draft with `review ID --diff` ([tests](tests/workflow.test.ts)).
-- [x] Observe passing CI runs on macOS, Linux, and Windows. [Run 39163824283](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39163824283) passed on commit `8942bb22c6f144b24ce8a566c655f83b05e4d361` with Node 24.22.0 and pinned current actions. Ubuntu is explicitly 24.04 to avoid an in-progress `ubuntu-latest` image migration.
+- [x] Observe passing CI runs on macOS, Linux, and Windows. [Run 39164292043](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39164292043) passed on commit `7b8337a88811e29165fe53d07b74eb9d5fee53f1` with Node 24.22.0, the 30-test suite, and pinned current actions. Ubuntu is explicitly 24.04 to avoid an in-progress `ubuntu-latest` image migration.
 
 ## Phase 2 — portable skill and manual workflow: implemented, gate unverified
 
@@ -79,4 +79,4 @@ The evidence gates, approach comparisons, and acceptance criteria are in the [de
 3. If a v0.1 archive becomes available, verify and import its actual format. If consented real corrections become available, freeze an A/B study and measure outcomes; otherwise make no compatibility or effectiveness claim.
 4. Qualify Cursor and further adapters only after their contracts and smoke tests are repeatable. Complete the beta security/release review after the evidence gates pass.
 
-**Proof for this audit:** The full 30/30 suite, `npm run check`, `npm run eval`, and `npm run eval:compare` passed locally on macOS with Node 24.22.0 on 2026-10-19. The [hosted CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39163824283) passed the prior 29-test commit on three operating systems; the 30-test commit needs its own hosted run. The Agent Skills reference validator passed after the skill change. The checked-in evaluation reports are synthetic reference runs; no live agent-host or coding-outcome result is implied.
+**Proof for this audit:** The full 30/30 suite, `npm run check`, `npm run eval`, and `npm run eval:compare` passed locally on macOS with Node 24.22.0 on 2026-10-19. The [hosted CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39164292043) passed the same code on three operating systems. The Agent Skills reference validator passed after the skill change. The checked-in evaluation reports are synthetic reference runs; no live agent-host or coding-outcome result is implied.

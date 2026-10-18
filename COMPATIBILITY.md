@@ -3,7 +3,7 @@
 | Surface | Current state | Evidence |
 |---|---|---|
 | Node.js 24.15+ within 24.x | Required | Local Node 24.22.0 macOS run; built-in `node:sqlite` remains release candidate |
-| macOS | Local CLI and hosted CI exercised | [Three-OS CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39163824283) |
+| macOS | Local CLI and hosted CI exercised | [Three-OS CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39164292043) |
 | Linux (Ubuntu 24.04) | Hosted CI exercised | Same run, `ubuntu-24.04` job |
 | Windows | Hosted CI exercised | Same run, `windows-latest` job |
 | Agent Skills hosts | Portable `SKILL.md` for manual use | Format checked against current specification; no live host smoke test |
@@ -13,6 +13,6 @@
 
 The CLI requires a Git repository for project-scoped operations. Symlinks and worktrees are covered by local tests; independent clones intentionally have separate IDs. Monorepo packages share repository scope. The Node runtime, Git executable and filesystem permissions must be available to the host process. The Claude hook points to this checkout and Node executable, so moving or removing either breaks it safely; uninstall before moving the checkout.
 
-The three jobs passed on commit `8942bb22c6f144b24ce8a566c655f83b05e4d361` with Node 24.22.0. They run type checking, the 29-test suite, and both synthetic evaluations. Hosted CI verifies the CLI and fixtures on these runners; it does not establish agent-host compatibility.
+The three jobs passed on commit `7b8337a88811e29165fe53d07b74eb9d5fee53f1` with Node 24.22.0. They run type checking, the 30-test suite, and both synthetic evaluations. Hosted CI verifies the CLI and fixtures on these runners; it does not establish agent-host compatibility.
 
 Documentation checked on 2026-10-18: [Agent Skills specification](https://agentskills.io/specification), [Claude Code hooks](https://code.claude.com/docs/en/hooks), [Cursor hooks](https://cursor.com/docs/hooks), and [Node SQLite](https://nodejs.org/api/sqlite.html). These documents describe contracts, not proof that a particular host version ran this integration.
