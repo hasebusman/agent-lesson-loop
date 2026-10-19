@@ -48,7 +48,9 @@ function compare(a: Explanation, b: Explanation): number {
 }
 
 function queryTerms(task: string): string {
-  const words = [...new Set((task.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []).filter(x => x.length >= 2))].slice(0, 30);
+  // The CLI bounds task text to 1,000 characters. Dropping later or short terms
+  // can make search disagree with the deterministic eligibility check.
+  const words = [...new Set(task.toLowerCase().match(/[\p{L}\p{N}]+/gu) || [])];
   return words.map(word => `"${word}"`).join(' OR ');
 }
 
@@ -86,7 +88,7 @@ export function explain(db: DatabaseSync, projectId: string, task: string, stack
       FROM lesson_fts f JOIN lesson_current c ON c.id=f.id
       WHERE c.active_revision IS NOT NULL AND ((c.scope_level='project' AND c.project_id=?)
         OR (c.scope_level='stack' AND c.stack=?) OR c.scope_level='global')
-        AND lesson_fts MATCH ?`).all(projectId, stack || '', query) as { id: string; score: number }[];
+        AND triggers MATCH ?`).all(projectId, stack || '', query) as { id: string; score: number }[];
     for (const row of rows) ranks.set(row.id, -row.score);
   }
   const visible = new Map<string, Lesson>();

@@ -187,7 +187,7 @@ export function candidateLessons(db: DatabaseSync, projectId: string, stack: str
       JOIN lesson_revisions r ON r.id=c.id AND r.revision=c.active_revision
     WHERE c.active_revision IS NOT NULL AND ((c.scope_level='project' AND c.project_id=?)
       OR (c.scope_level='stack' AND c.stack=?) OR c.scope_level='global')
-      AND lesson_fts MATCH ?`).all(projectId, stack || '', ftsQuery) as { data: string; score: number }[];
+      AND triggers MATCH ?`).all(projectId, stack || '', ftsQuery) as { data: string; score: number }[];
   const result: { lesson: Lesson; score: number }[] = [];
   for (const row of rows) {
     try { result.push({ lesson: decode(row.data), score: -row.score }); }

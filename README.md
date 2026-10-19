@@ -10,7 +10,7 @@ This is an **early local release**, not a measured improvement to coding agents.
 - Local use requires no service, account, network, model provider, or package installation. Run `node /path/to/agent-lesson-loop/bin/lessonlab.ts` directly. `npm link` is optional.
 - The project uses TypeScript source executed by Node 24. Run `npm ci` only to install developer tooling for `npm run check`.
 
-The CLI and fixtures passed [three-OS hosted CI](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39165177850) with Node 24.22.0. See [compatibility](COMPATIBILITY.md) for the limits of that result.
+The preceding revision passed [three-OS hosted CI](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39166331991) with Node 24.22.0. See [compatibility](COMPATIBILITY.md) for current verification status.
 
 ## Quick start
 

@@ -297,6 +297,28 @@ test('required subtask context suppresses a related but different task', () => {
   assert.match(ok(run(f.env, 'search', '--project', f.b, '--task', 'Fix auth API')), /Keep auth screen/);
 });
 
+test('search does not lose eligible lessons after long task text or a one-character trigger', () => {
+  const f = fixture();
+  const capture = (title: string, trigger: string) => {
+    const draft = ok(run(f.env, 'capture', '--project', f.a, '--title', title,
+      '--lesson', `Follow ${title}.`, '--when', trigger, '--verify', 'Inspect the result'));
+    const id = draft.match(/[0-9a-f-]{36}/)![0];
+    ok(run(f.env, 'approve', id, '--project', f.a));
+  };
+  capture('Late term', 'needle');
+  capture('Single letter', 'x');
+
+  const longTask = `${Array.from({ length: 180 }, (_, i) => `w${i}`).join(' ')} needle`;
+  assert.ok(longTask.length <= 1000);
+  assert.match(ok(run(f.env, 'explain', '--project', f.a, '--task', longTask)), /"eligible": true/);
+  assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', longTask)), /Late term/);
+  const denseTask = `${Array.from({ length: 400 }, (_, i) => String.fromCodePoint(0x4e00 + i)).join(' ')} needle`;
+  assert.ok(denseTask.length <= 1000);
+  assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', denseTask)), /Late term/);
+  assert.match(ok(run(f.env, 'explain', '--project', f.a, '--task', 'x')), /"eligible": true/);
+  assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'x')), /Single letter/);
+});
+
 test('older schema-v2 records without required terms retain their content hash', () => {
   const f = fixture();
   const draft = ok(run(f.env, 'capture', '--project', f.a, '--title', 'Existing auth rule',
