@@ -8,7 +8,7 @@ Checked against the [project architecture and release gates](agent-learning-syst
 - [x] A project-specific preference stays in its repository; it is not written into the portable skill or returned in another repository's search.
 - [x] Human review, developer-reported outcomes, and explicitly run command results have distinct labels; check output is discarded.
 - [x] Portable skill passes the Agent Skills format validator; optional Claude lookup hook passes local fixture tests.
-- [x] Hosted CI passed on macOS, Linux, and Windows with Node 24.22.0 for the 34-test deletion-warning revision ([run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39201650367)).
+- [x] Hosted CI passed on macOS, Linux, and Windows with Node 24.22.0 for the current 35-test code revision ([run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39202048710)).
 - [ ] Three real manual-skill hosts and live Claude CLI/IDE behavior are verified. Isolated Codex CLI 0.145.0 and Copilot CLI 1.0.77 runs read or loaded the project skill and selected and suppressed the expected synthetic lesson. A third host, unprompted skill selection, and live Claude behavior remain unverified; Gemini CLI 0.1.5 stopped at sign-in.
 - [ ] Real correction data, a coding-outcome A/B study, and the public-beta safety/performance gates are complete.
 
@@ -34,7 +34,7 @@ The repository is [public under hasebusman](https://github.com/hasebusman/agent-
 - [x] Add explicit platform/dependency version bounds with conservative abstention for missing, mismatched, or unsupported versions ([ADR 0003](docs/adr/0003-explicit-version-context.md), [tests](tests/workflow.test.ts)).
 - [ ] Resolve semantic conflicts and dedupe beyond identical applicability. Overlapping lessons with incomparable required-context terms now abstain when both apply; no semantic conflict detector is claimed.
 - [x] Show changed lesson content and scope between an active revision and pending draft with `review ID --diff` ([tests](tests/workflow.test.ts)).
-- [x] Observe passing CI runs on macOS, Linux, and Windows. [Run 39201650367](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39201650367) passed on commit `76ee4d1adf5738cc6c4a9d41dc00f59f6c17c1fb` with Node 24.22.0, the 34-test suite, and pinned current actions. Ubuntu is explicitly 24.04 to avoid an in-progress `ubuntu-latest` image migration.
+- [x] Observe passing CI runs on macOS, Linux, and Windows. [Run 39202048710](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39202048710) passed on commit `a6d1723f893073155b671ad9c72ccbef514ad2c5` with Node 24.22.0, the 35-test suite, and pinned current actions. Ubuntu is explicitly 24.04 to avoid an in-progress `ubuntu-latest` image migration.
 
 ## Phase 2 — portable skill and manual workflow: implemented, gate unverified
 
@@ -81,4 +81,4 @@ The evidence gates, approach comparisons, and acceptance criteria are in the [de
 3. If a v0.1 archive becomes available, verify and import its actual format. If consented real corrections become available, freeze an A/B study and measure outcomes; otherwise make no compatibility or effectiveness claim.
 4. Qualify Cursor and further adapters only after their contracts and smoke tests are repeatable. Complete the beta security/release review after the evidence gates pass.
 
-**Proof for this audit:** The current 35-test suite and `npm run check` passed locally on macOS with Node 24.22.0 on 2026-10-19; earlier `npm run eval` and `npm run eval:compare` runs passed. The 10,000-lesson scale run passed on the preceding 33-test revision. The linked [hosted CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39201650367) passed the 34-test revision on three operating systems; the new 35th test awaits hosted CI. Isolated Codex and Copilot CLI smoke traces record skill loading or reading, selection, and suppression. The Agent Skills reference validator passed after the skill change. The checked-in evaluation reports are synthetic reference runs; no coding-outcome result is implied.
+**Proof for this audit:** The current 35-test suite and `npm run check` passed locally on macOS with Node 24.22.0 on 2026-10-19; `npm run eval` and `npm run eval:compare` passed in [hosted CI](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39202048710) on all three operating systems. The 10,000-lesson scale run passed on the preceding 33-test revision. Isolated Codex and Copilot CLI smoke traces record skill loading or reading, selection, and suppression. The Agent Skills reference validator passed after the skill change. The checked-in evaluation reports are synthetic reference runs; no coding-outcome result is implied.
