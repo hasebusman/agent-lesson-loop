@@ -458,17 +458,24 @@ test('backup, export, dry-run and deletion preserve privacy boundaries', () => {
     '--lesson', 'Keep existing layout.', '--when', 'login', '--verify', 'Inspect layout'));
   const id = draft.match(/[0-9a-f-]{36}/)![0];
   ok(run(f.env, 'approve', id, '--project', f.a));
+  const otherDraft = ok(run(f.env, 'capture', '--project', f.b, '--title', 'Other project',
+    '--lesson', 'Keep the other project intact.', '--when', 'profile', '--verify', 'Inspect profile'));
+  const otherId = otherDraft.match(/[0-9a-f-]{36}/)![0];
+  ok(run(f.env, 'approve', otherId, '--project', f.b));
   const backup = ok(run(f.env, 'backup')).replace('Backup saved: ', '');
   assert.ok(existsSync(backup));
   const output = join(f.root, 'export.json');
   ok(run(f.env, 'export', '--project', f.a, '--output', output));
   assert.equal(JSON.parse(readFileSync(output, 'utf8')).lessons[0].revisions.length, 2);
   assert.equal(run(f.env, 'export', '--project', f.a, '--output', output).status, 1);
-  ok(run(f.env, 'delete', id, '--project', f.a, '--dry-run'));
+  assert.match(ok(run(f.env, 'delete', id, '--project', f.a, '--dry-run')),
+    /every local backup of this store \(including other projects\)/);
   assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix login')), /Layout/);
   assert.equal(run(f.env, 'delete', id, '--project', f.a).status, 1);
-  ok(run(f.env, 'delete', id, '--project', f.a, '--yes'));
+  assert.match(ok(run(f.env, 'delete', id, '--project', f.a, '--yes')),
+    /every local backup of this store \(including other projects\)/);
   assert.equal(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix login')), '');
+  assert.match(ok(run(f.env, 'search', '--project', f.b, '--task', 'Fix profile')), /Other project/);
   assert.equal(existsSync(join(f.root, 'data', 'backups')), false);
 });
 

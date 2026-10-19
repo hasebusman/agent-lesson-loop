@@ -222,6 +222,7 @@ export function deleteLesson(db: DatabaseSync, id: string) {
     db.prepare('DELETE FROM lesson_revisions WHERE id=?').run(id);
   });
   db.exec('PRAGMA wal_checkpoint(TRUNCATE); VACUUM;');
+  // Every backup contains the whole store, so any one may resurrect this lesson.
   rmSync(join(dataDirectory(), 'backups'), { recursive: true, force: true });
 }
 

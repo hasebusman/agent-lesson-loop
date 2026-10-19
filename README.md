@@ -56,7 +56,7 @@ lessonlab doctor
 
 Project lessons stay within one canonical Git repository; its worktrees share an identity. Stack and global scope require a separate promotion draft and an explicit `--promotion-approval` on approval. For example, `lessonlab promote <id> --scope stack --stack react-native`, then review the new revision and run `lessonlab approve <id> --promotion-approval`. Avoid global promotion unless the correction really applies everywhere.
 
-`lessonlab backup` creates a private, consistent SQLite backup. `lessonlab export --output /private/path.json` writes the current project's revisions and audit history to a new file. `lessonlab delete <id> --yes` or `lessonlab delete --all --yes` permanently removes local records and local backups; external exports remain yours to remove. Use `--dry-run` to preview deletion. `lessonlab --help` lists all commands.
+`lessonlab backup` creates a private, consistent SQLite backup. `lessonlab export --output /private/path.json` writes the current project's revisions and audit history to a new file. `lessonlab delete <id> --yes` permanently removes that lesson and **all backups of the store**, including backups of other projects, because each backup contains the full database. `lessonlab delete --all --yes` removes all local records and backups. External exports remain yours to remove. Use `--dry-run` to preview deletion. `lessonlab --help` lists all commands.
 
 ## Agent integration
 

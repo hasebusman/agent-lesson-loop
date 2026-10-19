@@ -29,7 +29,7 @@ Commands:
   rollback ID --revision N   Restore a previously approved revision
   backup                     Make a consistent private SQLite backup
   export --output PATH        Export this project's revisions and audit as private JSON
-  delete ID --yes             Permanently delete one lesson and local backups
+  delete ID --yes             Permanently delete one lesson and all store backups
   delete --all --yes          Delete all lessons and local backups
   integrate claude            Preview or enable Claude Code read-only lookup hook
   uninstall claude            Preview or remove only the owned Claude Code hook
@@ -133,8 +133,8 @@ function main() {
       const existing = currentLesson(db, positional[0]);
       if (!existing || existing.projectId !== project.id) throw new Error('Lesson not found in this project');
       if (!flags.has('--yes') && !flags.has('--dry-run')) throw new Error('delete requires --yes');
-      if (flags.has('--dry-run')) console.log(`Would delete ${existing.id}, all revisions and audit, and local backups.`);
-      else { deleteLesson(db, existing.id); console.log(`Deleted ${existing.id} and local backups. External exports remain your responsibility.`); }
+      if (flags.has('--dry-run')) console.log(`Would delete ${existing.id}, all its revisions and audit, and every local backup of this store (including other projects).`);
+      else { deleteLesson(db, existing.id); console.log(`Deleted ${existing.id} and every local backup of this store (including other projects). External exports remain your responsibility.`); }
       return;
     }
     if (command === 'capture') {
