@@ -479,7 +479,7 @@ test('backup, export, dry-run and deletion preserve privacy boundaries', () => {
   assert.equal(existsSync(join(f.root, 'data', 'backups')), false);
 });
 
-test('v1 store migrates transactionally and keeps a private backup', () => {
+test('v1 store rolls back a failed migration, then migrates and restores a private backup', () => {
   const f = fixture();
   mkdirSync(join(f.root, 'data'));
   const db = new DatabaseSync(join(f.root, 'data', 'lessons.sqlite'));
@@ -504,16 +504,29 @@ test('v1 store migrates transactionally and keeps a private backup', () => {
   db.prepare('INSERT INTO lesson_current VALUES (?,?,?,?)').run(id, 2, projectId, 'approved');
   db.prepare('INSERT INTO audit(lesson_id,revision,action,occurred_at) VALUES (?,?,?,?)').run(id, 2, 'approved', old.approvedAt);
   db.prepare('INSERT INTO lesson_fts(id,title,lesson,triggers) VALUES (?,?,?,?)').run(id, old.title, old.lesson, 'login');
+  const malformedId = '00000000-0000-4000-8000-000000000002';
+  db.prepare('INSERT INTO lesson_revisions VALUES (?,?,?,?,?,?)').run(malformedId, 1, projectId, 'approved', '{', old.createdAt);
   db.close();
   assert.match(run(f.env, 'search', '--project', f.a, '--task', 'Fix login').stderr, /explicit CLI migration/);
+  assert.equal(run(f.env, 'init').status, 1);
+  const failedMigration = new DatabaseSync(join(f.root, 'data', 'lessons.sqlite'));
+  assert.equal(failedMigration.prepare('PRAGMA user_version').get()!.user_version, 1);
+  assert.equal(failedMigration.prepare('SELECT COUNT(*) AS count FROM lesson_revisions').get()!.count, 2);
+  assert.equal(failedMigration.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE name LIKE '%_v2'").get()!.count, 0);
+  failedMigration.prepare('DELETE FROM lesson_revisions WHERE id=?').run(malformedId);
+  failedMigration.close();
+  const failedBackup = readdirSync(join(f.root, 'data', 'backups'));
+  assert.equal(failedBackup.length, 1);
   ok(run(f.env, 'init'));
   assert.equal(JSON.parse(ok(run(f.env, 'doctor'))).schema, 2);
   assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix login')), /Old login lesson/);
   const backups = readdirSync(join(f.root, 'data', 'backups'));
-  assert.equal(backups.length, 1);
+  assert.equal(backups.length, 2);
+  const recoverableBackup = backups.find(backup => !failedBackup.includes(backup));
+  assert.ok(recoverableBackup);
   const restoredHome = join(f.root, 'restored-data');
   mkdirSync(restoredHome);
-  copyFileSync(join(f.root, 'data', 'backups', backups[0]), join(restoredHome, 'lessons.sqlite'));
+  copyFileSync(join(f.root, 'data', 'backups', recoverableBackup), join(restoredHome, 'lessons.sqlite'));
   const restoredEnv = { ...f.env, LESSONLAB_HOME: restoredHome };
   ok(run(restoredEnv, 'init'));
   assert.equal(JSON.parse(ok(run(restoredEnv, 'doctor'))).schema, 2);
