@@ -58,6 +58,8 @@ Only test embeddings or model-assisted drafting if the measured failure mode is 
 
 Complete a documented security review and host/version matrix, dependency and license audit, adversarial test corpus, installation and removal tests, and release notes. Add reproducible build artifacts and provenance only when there is a real published artifact: [GitHub artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations) bind an artifact to the workflow, repository, and commit. Keep release permissions narrower than build permissions. Close the numerical targets in the architecture plan with observed reports, and block beta on any critical privacy, permission, or corruption finding.
 
+The [locked dependency review](docs/dependency-review.md) records MIT/Apache-2.0 license metadata and a zero-vulnerability `npm audit` result on 2026-10-19. It is a point-in-time advisory check. Broader security and adversarial review remains open.
+
 ## Explicit dependencies
 
 - A hosted CI run requires a Git remote/repository. Local tests cannot substitute for macOS/Linux/Windows runner evidence.
