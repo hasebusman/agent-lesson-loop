@@ -3,7 +3,7 @@
 | Surface | Current state | Evidence |
 |---|---|---|
 | Node.js 24.15+ within 24.x | Required | Local Node 24.22.0 macOS run; built-in `node:sqlite` remains release candidate |
-| macOS | Local CLI and hosted CI exercised | [Three-OS CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39200574089) |
+| macOS | Local CLI and hosted CI exercised | [Three-OS CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39201107445) |
 | Linux (Ubuntu 24.04) | Hosted CI exercised | Same run, `ubuntu-24.04` job |
 | Windows | Hosted CI exercised | Same run, `windows-latest` job |
 | Agent Skills hosts | Portable `SKILL.md` for manual use | Format checked against current specification; explicit Codex and Copilot CLI smoke runs, with project-skill discovery in Copilot after explicit invocation |
@@ -15,7 +15,7 @@
 
 The CLI requires a Git repository for project-scoped operations. Symlinks and worktrees are covered by local tests; independent clones intentionally have separate IDs. Monorepo packages share repository scope. The Node runtime, Git executable and filesystem permissions must be available to the host process. The Claude hook points to this checkout and Node executable, so moving or removing either breaks it safely; uninstall before moving the checkout.
 
-The three jobs passed on commit `07ce16f` with Node 24.22.0. They ran type checking, the 33-test suite, and both synthetic evaluations. Hosted CI verifies the CLI and fixtures on these runners; it does not establish agent-host compatibility.
+The three jobs passed on commit `07bc393` with Node 24.22.0. They ran type checking, the 34-test suite, and both synthetic evaluations. Hosted CI verifies the CLI and fixtures on these runners; it does not establish agent-host compatibility.
 
 On 2026-10-19, an explicit Codex CLI 0.145.0 run in a temporary Git repository and read-only sandbox read the project's skill file, then invoked `search` and `explain` for synthetic login tasks. All four lookup commands exited successfully. It selected the approved lesson for an auth fix, suppressed it for a redesign, and left source files unchanged. An earlier CLI-only attempt exposed write-capable store setup in lookup commands; the current code routes them through the read-only opener. These runs do not establish unprompted skill selection or coding benefit.
 

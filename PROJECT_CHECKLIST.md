@@ -8,7 +8,7 @@ Checked against the [project architecture and release gates](agent-learning-syst
 - [x] A project-specific preference stays in its repository; it is not written into the portable skill or returned in another repository's search.
 - [x] Human review, developer-reported outcomes, and explicitly run command results have distinct labels; check output is discarded.
 - [x] Portable skill passes the Agent Skills format validator; optional Claude lookup hook passes local fixture tests.
-- [x] Hosted CI passed on macOS, Linux, and Windows with Node 24.22.0 for the 33-test retrieval revision ([run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39200574089)).
+- [x] Hosted CI passed on macOS, Linux, and Windows with Node 24.22.0 for the 34-test overlap revision ([run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39201107445)).
 - [ ] Three real manual-skill hosts and live Claude CLI/IDE behavior are verified. Isolated Codex CLI 0.145.0 and Copilot CLI 1.0.77 runs read or loaded the project skill and selected and suppressed the expected synthetic lesson. A third host, unprompted skill selection, and live Claude behavior remain unverified; Gemini CLI 0.1.5 stopped at sign-in.
 - [ ] Real correction data, a coding-outcome A/B study, and the public-beta safety/performance gates are complete.
 
@@ -20,8 +20,8 @@ The repository is [public under hasebusman](https://github.com/hasebusman/agent-
 - [x] Create 30 reproducible synthetic retrieval fixtures and JSON reports ([evaluation](docs/evaluation.md), [baseline report](evals/reports/synthetic-baseline.json)).
 - [ ] Inspect and preserve the referenced v0.1 ZIP, create regression fixtures for its actual format, and implement its importer. The ZIP was not supplied; the existing v1 **internal SQLite schema** migration is a different format.
 - [ ] Assemble 10–20 consented, reviewed, scrubbed real mobile corrections. None were supplied; synthetic lessons cannot establish real-world effectiveness.
-- [x] Record [ADR 0001](docs/adr/0001-reviewed-local-lessons.md) for reviewed local lessons and [ADR 0002](docs/adr/0002-explicit-check-evidence.md) for evidence provenance and output retention.
-- [ ] Record remaining retrieval/host decisions and freeze observed host event contracts before qualifying further automatic adapters.
+- [x] Record [ADR 0001](docs/adr/0001-reviewed-local-lessons.md) for reviewed local lessons, [ADR 0002](docs/adr/0002-explicit-check-evidence.md) for evidence provenance, [ADR 0003](docs/adr/0003-explicit-version-context.md) for version bounds, and [ADR 0004](docs/adr/0004-trigger-retrieval-and-overlap.md) for retrieval and overlap.
+- [ ] Record host decisions and freeze observed host event contracts before qualifying further automatic adapters.
 
 ## Phase 1 — reliable local core: partial gate
 
@@ -34,7 +34,7 @@ The repository is [public under hasebusman](https://github.com/hasebusman/agent-
 - [x] Add explicit platform/dependency version bounds with conservative abstention for missing, mismatched, or unsupported versions ([ADR 0003](docs/adr/0003-explicit-version-context.md), [tests](tests/workflow.test.ts)).
 - [ ] Resolve semantic conflicts and dedupe beyond identical applicability. Overlapping lessons with incomparable required-context terms now abstain when both apply; no semantic conflict detector is claimed.
 - [x] Show changed lesson content and scope between an active revision and pending draft with `review ID --diff` ([tests](tests/workflow.test.ts)).
-- [x] Observe passing CI runs on macOS, Linux, and Windows. [Run 39200574089](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39200574089) passed on commit `07ce16f0fb846820199db590c1d30c2613dfae18` with Node 24.22.0, the 33-test suite, and pinned current actions. Ubuntu is explicitly 24.04 to avoid an in-progress `ubuntu-latest` image migration.
+- [x] Observe passing CI runs on macOS, Linux, and Windows. [Run 39201107445](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39201107445) passed on commit `07bc3936a33f4542b8000acc1687144e24d8a681` with Node 24.22.0, the 34-test suite, and pinned current actions. Ubuntu is explicitly 24.04 to avoid an in-progress `ubuntu-latest` image migration.
 
 ## Phase 2 — portable skill and manual workflow: implemented, gate unverified
 
@@ -64,7 +64,8 @@ The repository is [public under hasebusman](https://github.com/hasebusman/agent-
 - [x] Include Apache-2.0, README, privacy/security/contributing/conduct/changelog/compatibility documentation, SHA-pinned, read-only-permission CI actions, weekly dependency update checks, and private vulnerability reporting ([compatibility](COMPATIBILITY.md), [CI](.github/workflows/ci.yml), [Dependabot](.github/dependabot.yml)).
 - [ ] Verify a host/version matrix for Claude, Cursor, and at least three manual-skill hosts, plus supported operating systems. Other automatic adapters remain unqualified.
 - [x] Review locked dependency licenses and npm advisories ([review](docs/dependency-review.md)); `npm audit` reported zero vulnerabilities on 2026-10-19.
-- [ ] Add remaining release artifacts and process: remaining ADRs, dedicated quickstart/troubleshooting documentation, a broader security review and adversarial scans, build artifacts with provenance/checksums when published, and host qualification.
+- [x] Provide a quickstart in the README and [troubleshooting](docs/troubleshooting.md) for supported CLI and integration paths.
+- [ ] Add remaining release artifacts and process: host-contract ADRs, a broader security review and adversarial scans, build artifacts with provenance/checksums when published, and host qualification.
 - [ ] Demonstrate release gates in a documented environment: approved-only retrieval, separate global approval, zero published canary leaks/critical boundary failures, negative suppression target, end-to-end p95 target, install/disable/crash/uninstall behavior, and no material negative-control degradation.
 
 ## Phase 6 — after beta: deferred by design
@@ -80,4 +81,4 @@ The evidence gates, approach comparisons, and acceptance criteria are in the [de
 3. If a v0.1 archive becomes available, verify and import its actual format. If consented real corrections become available, freeze an A/B study and measure outcomes; otherwise make no compatibility or effectiveness claim.
 4. Qualify Cursor and further adapters only after their contracts and smoke tests are repeatable. Complete the beta security/release review after the evidence gates pass.
 
-**Proof for this audit:** The current 34-test suite, `npm run check`, `npm run eval`, and `npm run eval:compare` passed locally on macOS with Node 24.22.0 on 2026-10-19. The 10,000-lesson scale run passed on the preceding 33-test revision. The linked [hosted CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39200574089) passed that revision on three operating systems; [CI history](https://github.com/hasebusman/agent-lesson-loop/actions/workflows/ci.yml) shows the current revision after push. Isolated Codex and Copilot CLI smoke traces record skill loading or reading, selection, and suppression. The Agent Skills reference validator passed after the skill change. The checked-in evaluation reports are synthetic reference runs; no coding-outcome result is implied.
+**Proof for this audit:** The current 34-test suite, `npm run check`, `npm run eval`, and `npm run eval:compare` passed locally on macOS with Node 24.22.0 on 2026-10-19. The 10,000-lesson scale run passed on the preceding 33-test revision. The linked [hosted CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39201107445) passed the 34-test revision on three operating systems. Isolated Codex and Copilot CLI smoke traces record skill loading or reading, selection, and suppression. The Agent Skills reference validator passed after the skill change. The checked-in evaluation reports are synthetic reference runs; no coding-outcome result is implied.

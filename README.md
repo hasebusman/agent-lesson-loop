@@ -10,7 +10,7 @@ This is an **early local release**, not a measured improvement to coding agents.
 - Local use requires no service, account, network, model provider, or package installation. Run `node /path/to/agent-lesson-loop/bin/lessonlab.ts` directly. `npm link` is optional.
 - The project uses TypeScript source executed by Node 24. Run `npm ci` only to install developer tooling for `npm run check`.
 
-The CLI and fixtures passed [three-OS hosted CI](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39200574089) with Node 24.22.0. See [compatibility](COMPATIBILITY.md) for current verification status.
+The CLI and fixtures passed [three-OS hosted CI](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39201107445) with Node 24.22.0. See [compatibility](COMPATIBILITY.md) for current verification status.
 
 ## Quick start
 
@@ -37,7 +37,7 @@ Version-specific advice can include `--platform ios --dependency firebase --min-
 
 After approval, `lessonlab attest <id> --result passed --note "I ran the login test"` stores a developer report with that label. `lessonlab run-check <id> -- npm test` executes the explicit command from the project root, without a shell, and records its exit result, command arguments, runtime/platform, timestamp, and output byte count. It does not preserve stdout, stderr, or environment variables. A nonzero exit is recorded as failed; a timeout, output limit, or launch error is unknown. The command can have its normal project side effects, so choose it as you would any other test command. Both evidence paths create immutable revisions. A later lesson-content edit leaves the old observation in history but does not present it as proof of the new content.
 
-Retrieval favors project lessons over stack lessons, then global lessons when they have identical applicability terms. If multiple lessons at the same most-specific scope have identical terms and exceptions, retrieval abstains and `explain` reports the ambiguity. Retire or revise one of the overlaps before relying on it. Semantic contradictions with different terms still require human review.
+When lessons share triggers and exceptions, retrieval favors project scope over stack scope, then global scope. Within one scope, a lesson with strictly more required-context terms shadows a general lesson when both apply. If applicable required contexts are identical or incomparable, retrieval abstains and `explain` reports the ambiguity. Retire or revise one of the overlaps before relying on it. Semantic contradictions with different triggers or exceptions still require human review.
 
 ## Review and control
 
@@ -65,6 +65,8 @@ Project lessons stay within one canonical Git repository; its worktrees share an
 - Cursor and other agents use the portable skill/manual CLI for now. Their unattended context injection has not been qualified.
 
 Installation does not enable automatic correction capture or change project source files. The hook silently emits no context on malformed input, disabled retrieval, or local errors.
+
+For common setup and lookup failures, see [troubleshooting](docs/troubleshooting.md).
 
 ## Data, evaluation, and development
 
