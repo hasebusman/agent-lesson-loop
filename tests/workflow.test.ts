@@ -7,6 +7,7 @@ import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { projectIdentity } from '../src/project.ts';
 import { contentHash } from '../src/model.ts';
+import { explain, selected } from '../src/retrieve.ts';
 
 const cli = resolve('bin/lessonlab.ts');
 
@@ -307,6 +308,68 @@ test('incomparable required contexts abstain when both lessons apply', () => {
   assert.ok(explanation.every((item: { eligible: boolean; reason: string }) => !item.eligible && item.reason.includes('ambiguous overlap')));
 });
 
+test('reviewed conflict links suppress only simultaneously applicable lessons', () => {
+  const f = fixture();
+  const create = (title: string, when: string, requires: string, except: string, conflicts?: string) => {
+    const args = ['capture', '--project', f.a, '--title', title, '--lesson', `Follow ${title}.`,
+      '--when', when, '--requires', requires, '--except', except, '--verify', 'Inspect the change'];
+    if (conflicts) args.push('--conflicts', conflicts);
+    const draft = ok(run(f.env, ...args));
+    const id = draft.match(/[0-9a-f-]{36}/)![0];
+    ok(run(f.env, 'approve', id, '--project', f.a));
+    return id;
+  };
+  const first = create('Keep screen', 'auth', 'screen', 'redesign');
+  const second = create('Change login', 'login', 'layout', 'rewrite', first);
+  create('Check backend', 'backend', 'backend', 'redesign');
+  const foreign = ok(run(f.env, 'capture', '--project', f.b, '--title', 'Other project',
+    '--lesson', 'Inspect another project.', '--when', 'login', '--verify', 'Inspect login'));
+  const foreignId = foreign.match(/[0-9a-f-]{36}/)![0];
+  ok(run(f.env, 'approve', foreignId, '--project', f.b));
+  for (const invalid of [second, foreignId, 'not-an-id']) {
+    const attempted = run(f.env, 'revise', second, '--project', f.a, '--conflicts', invalid);
+    assert.equal(attempted.status, 1);
+  }
+  const db = new DatabaseSync(join(f.root, 'data', 'lessons.sqlite'), { readOnly: true });
+  try {
+    const terms = ['auth', 'screen', 'redesign', 'login', 'layout', 'rewrite'];
+    for (let mask = 0; mask < 1 << terms.length; mask++) {
+      const task = `fix ${terms.filter((_, index) => mask & (1 << index)).join(' ')}`;
+      const a = Boolean(mask & 1 && mask & 2 && !(mask & 4));
+      const b = Boolean(mask & 8 && mask & 16 && !(mask & 32));
+      const expected = a && b ? [] : [a ? first : null, b ? second : null].filter(Boolean);
+      const actual = selected(db, projectIdentity(f.a).id, task).map(item => item.lesson.id);
+      assert.deepEqual(actual.sort(), expected.sort(), `applicability mask ${mask}`);
+      const reasons = explain(db, projectIdentity(f.a).id, task);
+      assert.deepEqual(reasons.filter(item => item.eligible).map(item => item.lesson.id).sort(), expected.sort(), `explanation mask ${mask}`);
+    }
+  } finally { db.close(); }
+
+  const both = 'Fix auth login screen layout backend';
+  const result = ok(run(f.env, 'search', '--project', f.a, '--task', both));
+  assert.doesNotMatch(result, /Keep screen|Change login/);
+  assert.match(result, /Check backend/);
+  const explanation = JSON.parse(ok(run(f.env, 'explain', '--project', f.a, '--task', both)));
+  for (const id of [first, second]) {
+    assert.match(explanation.find((item: { id: string }) => item.id === id).reason, /declared conflict/);
+  }
+  assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix auth screen')), /Keep screen/);
+  assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix login layout')), /Change login/);
+  assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Redesign auth login screen layout')), /Change login/);
+
+  ok(run(f.env, 'revise', second, '--project', f.a, '--clear-conflicts'));
+  const diff = JSON.parse(ok(run(f.env, 'review', second, '--project', f.a, '--diff')));
+  assert.ok(diff.changes.some((change: { field: string; before: string[]; after: string[] }) =>
+    change.field === 'conflicts' && change.before.includes(first) && change.after.length === 0));
+  assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', both)), /Check backend/);
+  ok(run(f.env, 'approve', second, '--project', f.a));
+  const resolved = ok(run(f.env, 'search', '--project', f.a, '--task', both));
+  assert.match(resolved, /Keep screen/);
+  assert.match(resolved, /Change login/);
+  ok(run(f.env, 'rollback', second, '--project', f.a, '--revision', '2'));
+  assert.doesNotMatch(ok(run(f.env, 'search', '--project', f.a, '--task', both)), /Keep screen|Change login/);
+});
+
 test('required subtask context suppresses a related but different task', () => {
   const f = fixture();
   const capture = (project: string, requires?: string) => {
@@ -348,7 +411,7 @@ test('search does not lose eligible lessons after long task text or a one-charac
   assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'x')), /Single letter/);
 });
 
-test('older schema-v2 records without required terms retain their content hash', () => {
+test('older schema-v2 records without required terms or conflict links retain their content hash', () => {
   const f = fixture();
   const draft = ok(run(f.env, 'capture', '--project', f.a, '--title', 'Existing auth rule',
     '--lesson', 'Keep the existing auth behavior.', '--when', 'auth', '--verify', 'Inspect auth'));
@@ -358,6 +421,7 @@ test('older schema-v2 records without required terms retain their content hash',
   const row = db.prepare('SELECT data FROM lesson_revisions WHERE id=? AND revision=2').get(id) as { data: string };
   const previousShape = JSON.parse(row.data);
   delete previousShape.requires;
+  delete previousShape.conflicts;
   db.prepare('UPDATE lesson_revisions SET data=? WHERE id=? AND revision=2').run(JSON.stringify(previousShape), id);
   db.close();
   assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix auth')), /Existing auth rule/);

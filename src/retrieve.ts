@@ -17,6 +17,24 @@ function strictlyNarrowerRequirements(a: Lesson, b: Lesson): boolean {
 // Within one scope, a lesson shadows another only if it requires a strict
 // superset of the other's terms. Incomparable applicable conditions abstain.
 function resolveOverlap(items: Explanation[]): Explanation[] {
+  const eligible = new Map(items.filter(item => item.eligible).map(item => [item.lesson.id, item]));
+  const conflicts = new Map<string, Set<string>>();
+  for (const item of eligible.values()) {
+    for (const id of item.lesson.conflicts) {
+      if (!eligible.has(id)) continue;
+      if (!conflicts.has(item.lesson.id)) conflicts.set(item.lesson.id, new Set());
+      if (!conflicts.has(id)) conflicts.set(id, new Set());
+      conflicts.get(item.lesson.id)!.add(id);
+      conflicts.get(id)!.add(item.lesson.id);
+    }
+  }
+  for (const item of eligible.values()) {
+    const linked = conflicts.get(item.lesson.id);
+    if (!linked?.size) continue;
+    item.eligible = false;
+    item.rank = 0;
+    item.reason = `declared conflict with ${[...linked].sort().join(', ')}`;
+  }
   const groups = new Map<string, Explanation[]>();
   for (const item of items) {
     if (!item.eligible) continue;

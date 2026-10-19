@@ -32,6 +32,7 @@ export type Lesson = {
   approvedAt: string | null;
   expiresAt: string | null;
   supersedes: string[];
+  conflicts: string[];
   hash: string;
   evidence: Evidence[];
   confidence: 'draft' | 'reviewed';
@@ -61,11 +62,19 @@ export function parseTerms(value: unknown, field: string, required = false): str
   return [...new Set(terms)];
 }
 
-export function contentHash(value: Pick<Lesson, 'type' | 'scope' | 'title' | 'lesson' | 'triggers' | 'exclusions' | 'verify' | 'expiresAt'> & { requires?: string[]; environment?: LessonEnvironment }): string {
+export function parseConflictIds(value: unknown): string[] {
+  if (typeof value !== 'string') throw new Error('conflicts must be comma-separated lesson IDs');
+  const ids = value.split(',').map(id => id.trim());
+  if (ids.length > 12 || ids.some(id => !/^[0-9a-f-]{36}$/.test(id)) || new Set(ids).size !== ids.length) throw new Error('conflicts needs 1-12 distinct lesson IDs');
+  return ids;
+}
+
+export function contentHash(value: Pick<Lesson, 'type' | 'scope' | 'title' | 'lesson' | 'triggers' | 'exclusions' | 'verify' | 'expiresAt'> & { requires?: string[]; environment?: LessonEnvironment; conflicts?: string[] }): string {
   // Empty required terms preserve hashes of pre-existing schema-v2 records.
   const fields: unknown[] = [value.type, value.scope, value.title, value.lesson, value.triggers, value.exclusions, value.verify, value.expiresAt];
   if (value.requires?.length) fields.push(value.requires);
   if (value.environment) fields.push(value.environment);
+  if (value.conflicts?.length) fields.push([...value.conflicts].sort());
   return createHash('sha256').update(JSON.stringify(fields)).digest('hex');
 }
 
@@ -124,7 +133,7 @@ export function validExpiry(value: unknown): string | null {
   return `${value}T00:00:00.000Z`;
 }
 
-export function newLesson(input: { projectId: string; title: unknown; lesson: unknown; when: unknown; requires?: unknown; except?: unknown; verify: unknown; type?: unknown; expires?: unknown; platform?: unknown; dependency?: unknown; minVersion?: unknown; beforeVersion?: unknown }): Lesson {
+export function newLesson(input: { projectId: string; title: unknown; lesson: unknown; when: unknown; requires?: unknown; except?: unknown; conflicts?: unknown; verify: unknown; type?: unknown; expires?: unknown; platform?: unknown; dependency?: unknown; minVersion?: unknown; beforeVersion?: unknown }): Lesson {
   const type = input.type === undefined ? 'workflow' : input.type;
   if (!['preference', 'workflow', 'diagnostic', 'technical_fact', 'known_pitfall'].includes(String(type))) throw new Error('type is invalid');
   const lesson: Lesson = {
@@ -138,7 +147,7 @@ export function newLesson(input: { projectId: string; title: unknown; lesson: un
     verify: safeText(input.verify, 'verify', 300),
     sourceKind: 'manual_correction_attestation',
     createdAt: new Date().toISOString(), approvedAt: null,
-    expiresAt: validExpiry(input.expires), supersedes: [], hash: '', evidence: [], confidence: 'draft',
+    expiresAt: validExpiry(input.expires), supersedes: [], conflicts: input.conflicts === undefined ? [] : parseConflictIds(input.conflicts), hash: '', evidence: [], confidence: 'draft',
   };
   lesson.hash = contentHash(lesson);
   return lesson;
@@ -148,6 +157,7 @@ export function upgradeLesson(raw: Record<string, unknown>): Lesson {
   if (raw.schemaVersion === 2) return {
     ...raw,
     requires: raw.requires === undefined ? [] : raw.requires,
+    conflicts: raw.conflicts === undefined ? [] : raw.conflicts,
     evidence: Array.isArray(raw.evidence) ? raw.evidence : raw.approvedAt ? [{ kind: 'human_review', result: 'accepted', at: raw.approvedAt }] : [],
     confidence: raw.confidence === 'reviewed' || raw.approvedAt ? 'reviewed' : 'draft',
   } as unknown as Lesson;
@@ -160,7 +170,7 @@ export function upgradeLesson(raw: Record<string, unknown>): Lesson {
     triggers: raw.triggers as string[], requires: [], exclusions: raw.exclusions as string[],
     verify: String(raw.verify), sourceKind: 'manual_correction_attestation',
     createdAt: String(raw.createdAt), approvedAt: raw.approvedAt ? String(raw.approvedAt) : null,
-    expiresAt: null, supersedes: [], hash: '',
+    expiresAt: null, supersedes: [], conflicts: [], hash: '',
     evidence: raw.status === 'approved' && raw.approvedAt ? [{ kind: 'human_review', result: 'accepted', at: String(raw.approvedAt) }] : [],
     confidence: raw.status === 'approved' ? 'reviewed' : 'draft',
   };
@@ -189,6 +199,7 @@ export function validateLesson(lesson: Lesson): void {
   safeText(lesson.lesson, 'lesson');
   safeText(lesson.verify, 'verify', 300);
   if (!Array.isArray(lesson.triggers) || !Array.isArray(lesson.requires) || !Array.isArray(lesson.exclusions)) throw new Error('Invalid applicability terms');
+  if (!Array.isArray(lesson.conflicts) || lesson.conflicts.length > 12 || lesson.conflicts.some(id => typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id) || id === lesson.id) || new Set(lesson.conflicts).size !== lesson.conflicts.length) throw new Error('Invalid conflict links');
   parseTerms(lesson.triggers.join(','), 'when', true);
   if (lesson.requires.length) parseTerms(lesson.requires.join(','), 'requires');
   if (lesson.exclusions.length) parseTerms(lesson.exclusions.join(','), 'except');
@@ -224,7 +235,7 @@ export function taskHasTerm(task: string, term: string): boolean {
   return (` ${normalized} `).includes(` ${needle} `);
 }
 
-const reviewFields = ['title', 'lesson', 'type', 'scope', 'environment', 'triggers', 'requires', 'exclusions', 'verify', 'expiresAt'] as const;
+const reviewFields = ['title', 'lesson', 'type', 'scope', 'environment', 'triggers', 'requires', 'exclusions', 'conflicts', 'verify', 'expiresAt'] as const;
 
 export function reviewDiff(before: Lesson | null, draft: Lesson) {
   return {

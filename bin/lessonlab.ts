@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { arch, platform } from 'node:os';
 import { join, resolve } from 'node:path';
 import { projectIdentity } from '../src/project.ts';
-import { dependencyName, lessonEnvironment, newLesson, parseTerms, platformName, reviewDiff, safeText, validExpiry, type LessonScope } from '../src/model.ts';
+import { dependencyName, lessonEnvironment, newLesson, parseConflictIds, parseTerms, platformName, reviewDiff, safeText, validExpiry, type LessonScope } from '../src/model.ts';
 import { activeLesson, backupDatabase, changeStatus, currentLesson, dataDirectory, deleteAll, deleteLesson, exportProject, history, insertLesson, integrity, invalidRecordCount, isEnabled, openReadStore, openStore, projectLessons, proposeRevision, recordEvidence, rollback, setEnabled } from '../src/store.ts';
 import { explain, render, selected, type TaskEnvironment } from '../src/retrieve.ts';
 import { changeClaudeIntegration, claudeIntegration } from '../src/integrations.ts';
@@ -42,6 +42,8 @@ Options:
   --project PATH             Git repository path (default: current directory)
   --stack NAME               Stack context for search, or target of stack promotion
   --requires TERMS           All comma-separated terms must occur in the task
+  --conflicts IDS            Reviewed conflict with these lesson IDs in this project
+  --clear-conflicts          Remove conflict links in a reviewed revision
   --type NAME                Lesson type for capture or revise
   --result STATUS            Developer-reported result for attest
   --note TEXT                Short developer attestation; never machine evidence
@@ -74,9 +76,9 @@ function parse(args: string[]) {
   for (let i = 0; i < options.length; i++) {
     const part = options[i];
     if (!part.startsWith('--')) { positional.push(part); continue; }
-    if (!['--project', '--title', '--lesson', '--when', '--requires', '--except', '--verify', '--task', '--json', '--diff', '--type', '--result', '--note', '--expires', '--platform', '--dependency', '--min-version', '--before-version', '--dependency-version', '--clear-environment', '--stack', '--scope', '--revision', '--promotion-approval', '--output', '--all', '--yes', '--dry-run', '--config', '--host'].includes(part)) throw new Error(`Unknown option ${part}`);
+    if (!['--project', '--title', '--lesson', '--when', '--requires', '--except', '--conflicts', '--clear-conflicts', '--verify', '--task', '--json', '--diff', '--type', '--result', '--note', '--expires', '--platform', '--dependency', '--min-version', '--before-version', '--dependency-version', '--clear-environment', '--stack', '--scope', '--revision', '--promotion-approval', '--output', '--all', '--yes', '--dry-run', '--config', '--host'].includes(part)) throw new Error(`Unknown option ${part}`);
     if (flags.has(part)) throw new Error(`Repeated option ${part}`);
-    if (['--json', '--diff', '--clear-environment', '--promotion-approval', '--all', '--yes', '--dry-run'].includes(part)) { flags.set(part, true); continue; }
+    if (['--json', '--diff', '--clear-environment', '--clear-conflicts', '--promotion-approval', '--all', '--yes', '--dry-run'].includes(part)) { flags.set(part, true); continue; }
     const value = options[++i];
     if (!value || value.startsWith('--')) throw new Error(`${part} needs a value`);
     flags.set(part, value);
@@ -88,6 +90,15 @@ function required(flags: Map<string, string | boolean>, name: string): string {
   const value = flags.get(name);
   if (typeof value !== 'string') throw new Error(`${name} is required`);
   return value;
+}
+
+function conflictIds(db: ReturnType<typeof openStore>['db'], value: unknown, projectId: string, selfId?: string): string[] {
+  const ids = parseConflictIds(value);
+  for (const id of ids) {
+    const target = activeLesson(db, id);
+    if (id === selfId || !target || target.projectId !== projectId) throw new Error('conflict target must be another approved lesson in this project');
+  }
+  return ids;
 }
 
 function main() {
@@ -138,8 +149,9 @@ function main() {
       return;
     }
     if (command === 'capture') {
-      if (flags.has('--clear-environment') || flags.has('--dependency-version')) throw new Error('capture uses bounds, not lookup version or clear-environment');
+      if (flags.has('--clear-environment') || flags.has('--clear-conflicts') || flags.has('--dependency-version')) throw new Error('capture uses bounds and conflict IDs, not lookup version or clear flags');
       const lesson = newLesson({ projectId: project.id, title: required(flags, '--title'), lesson: required(flags, '--lesson'), when: required(flags, '--when'), requires: flags.get('--requires'), except: flags.get('--except'), verify: required(flags, '--verify'), type: flags.get('--type'), expires: flags.get('--expires'),
+        conflicts: flags.has('--conflicts') ? conflictIds(db, flags.get('--conflicts'), project.id).join(',') : undefined,
         platform: flags.get('--platform'), dependency: flags.get('--dependency'), minVersion: flags.get('--min-version'), beforeVersion: flags.get('--before-version') });
       insertLesson(db, lesson);
       console.log(`Draft ${lesson.id} saved for ${project.root}. Run lessonlab review ${lesson.id}, then lessonlab approve ${lesson.id}.`);
@@ -202,8 +214,9 @@ function main() {
       const existing = currentLesson(db, positional[0]);
       if (!existing || existing.projectId !== project.id) throw new Error('Lesson not found in this project');
       const environmentFlags = ['--platform', '--dependency', '--min-version', '--before-version'];
-      if (command === 'revise' && !['--title', '--lesson', '--when', '--requires', '--except', '--verify', '--type', '--expires', '--clear-environment', ...environmentFlags].some(x => flags.has(x))) throw new Error('revise needs at least one changed field');
+      if (command === 'revise' && !['--title', '--lesson', '--when', '--requires', '--except', '--conflicts', '--clear-conflicts', '--verify', '--type', '--expires', '--clear-environment', ...environmentFlags].some(x => flags.has(x))) throw new Error('revise needs at least one changed field');
       if (command === 'revise' && flags.has('--clear-environment') && environmentFlags.some(x => flags.has(x))) throw new Error('clear-environment cannot be combined with environment bounds');
+      if (command === 'revise' && flags.has('--clear-conflicts') && flags.has('--conflicts')) throw new Error('clear-conflicts cannot be combined with conflict IDs');
       if (command === 'revise' && flags.has('--dependency-version')) throw new Error('revise uses bounds, not a lookup version');
       const draft = proposeRevision(db, existing.id, active => {
         if (command === 'promote') {
@@ -220,6 +233,7 @@ function main() {
           triggers: flags.has('--when') ? parseTerms(flags.get('--when'), 'when', true) : active.triggers,
           requires: flags.has('--requires') ? parseTerms(flags.get('--requires'), 'requires') : active.requires,
           exclusions: flags.has('--except') ? parseTerms(flags.get('--except'), 'except') : active.exclusions,
+          conflicts: flags.has('--clear-conflicts') ? [] : flags.has('--conflicts') ? conflictIds(db, flags.get('--conflicts'), project.id, active.id) : active.conflicts,
           verify: flags.has('--verify') ? safeText(flags.get('--verify'), 'verify', 300) : active.verify,
           type: (type || active.type) as typeof active.type,
           expiresAt: flags.has('--expires') ? validExpiry(flags.get('--expires')) : active.expiresAt,
