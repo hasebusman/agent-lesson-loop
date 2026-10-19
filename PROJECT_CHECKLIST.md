@@ -8,7 +8,7 @@ Checked against the [project architecture and release gates](agent-learning-syst
 - [x] A project-specific preference stays in its repository; it is not written into the portable skill or returned in another repository's search.
 - [x] Human review, developer-reported outcomes, and explicitly run command results have distinct labels; check output is discarded.
 - [x] Portable skill passes the Agent Skills format validator; optional Claude lookup hook passes local fixture tests.
-- [x] Hosted CI passed on macOS, Linux, and Windows with Node 24.22.0 for the preceding 35-test code revision ([run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39202048710)).
+- [x] Hosted CI passed on macOS, Linux, and Windows with Node 24.22.0 for the 36-test code revision ([run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39203566546)).
 - [ ] Three real manual-skill hosts and live Claude CLI/IDE behavior are verified. Isolated Codex CLI 0.145.0 and Copilot CLI 1.0.77 runs read or loaded the project skill and selected and suppressed the expected synthetic lesson. A third host, unprompted skill selection, and live Claude behavior remain unverified. Claude Code 1.0.90 reports an invalid API key; Gemini CLI 0.1.5 did not complete a model request and does not expose the current skills command.
 - [ ] Real correction data, a coding-outcome A/B study, and the public-beta safety/performance gates are complete.
 
@@ -41,6 +41,7 @@ The repository is [public under hasebusman](https://github.com/hasebusman/agent-
 - [x] Provide a portable [Agent Skill](skills/learn-from-corrections/SKILL.md), manual capture/review/approve workflow, and CLI `search`/`explain`; no hook or collection is enabled by default. Lookup, review, history, doctor, and export now open the store read-only.
 - [x] Run the Agent Skills reference validator. `skills-ref validate skills/learn-from-corrections` passed on 2026-10-19 using reference commit `69ef37e9424c0a7ea9dd2293b559e43ec8176379`; this checks format, not host behavior.
 - [ ] Manually invoke the skill in at least three real coding agents, recording host versions and whether source repositories remain unchanged. Explicit Codex CLI 0.145.0 and Copilot CLI 1.0.77 runs read or loaded the skill, used `search`/`explain` correctly with synthetic data, and did not edit the fixture repository. A third host and unprompted skill selection remain unverified. The installed Gemini CLI 0.1.5 did not complete a model request and does not expose the current skills command.
+- [x] Prepare a disposable [Claude Code Desktop smoke kit](docs/claude-desktop-smoke.md) with separate skill and hook projects, isolated synthetic lessons, project-local settings, and a payload-shape-only probe. Local CLI/hook preflight passed; Desktop behavior still needs a manual run.
 
 ## Phase 3 — opt-in adapters: partial
 
@@ -76,9 +77,9 @@ The repository is [public under hasebusman](https://github.com/hasebusman/agent-
 
 The evidence gates, approach comparisons, and acceptance criteria are in the [development roadmap](DEVELOPMENT_ROADMAP.md).
 
-1. Complete a third manual-skill host smoke test and live Claude CLI/IDE tests with exact host versions and observed payloads. Claude Code needs working authentication; Gemini needs a current skill-capable version and a completed authenticated request before it can count.
+1. Run the prepared [Claude Code Desktop smoke kit](docs/claude-desktop-smoke.md) in an authenticated local Code session. Record the app version, skill discovery and lookup trace, unique hook title, suppression result, payload shape, and unchanged fixture repositories. Claude CLI qualification remains separate; its installed CLI reports an invalid API key.
 2. Extend the local core with conflicting-condition fixtures and property/adversarial tests. Measure tokens and host overhead before asserting the performance gate.
 3. If a v0.1 archive becomes available, verify and import its actual format. If consented real corrections become available, freeze an A/B study and measure outcomes; otherwise make no compatibility or effectiveness claim.
 4. Qualify Cursor and further adapters only after their contracts and smoke tests are repeatable. Complete the beta security/release review after the evidence gates pass.
 
-**Proof for this audit:** The 36-test suite and `npm run check` passed locally on macOS with Node 24.22.0 on 2026-10-19; the [preceding hosted CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39202048710) passed 35 tests and both synthetic evaluations on all three operating systems. The 10,000-lesson scale run passed on an earlier 33-test revision. Isolated Codex and Copilot CLI smoke traces record skill loading or reading, selection, and suppression. The Agent Skills reference validator passed after the skill change. The checked-in evaluation reports are synthetic reference runs; no coding-outcome result is implied.
+**Proof for this audit:** The 36-test suite and `npm run check` passed locally on macOS with Node 24.22.0 on 2026-10-19; the [hosted CI run](https://github.com/hasebusman/agent-lesson-loop/actions/runs/39203566546) passed 36 tests and both synthetic evaluations on all three operating systems. The 10,000-lesson scale run passed on an earlier 33-test revision. The Desktop smoke kit passed local setup, positive/negative lookup, hook-output, and clean-Git preflight; it has not run in Desktop. Isolated Codex and Copilot CLI smoke traces record skill loading or reading, selection, and suppression. The Agent Skills reference validator passed after the skill change. The checked-in evaluation reports are synthetic reference runs; no coding-outcome result is implied.

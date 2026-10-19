@@ -24,6 +24,8 @@ An isolated Copilot CLI 1.0.77 run discovered and loaded the project skill after
 
 A 2026-10-19 recheck found Claude Code CLI 1.0.90 still reporting `Invalid API key`. Gemini CLI 0.1.5 did not complete a harmless isolated prompt within 25 seconds and did not expose the `gemini skills` management command described in the [current Gemini skills documentation](https://geminicli.com/docs/cli/skills/). The published CLI was 0.64.0 at the time of the check. Neither attempt qualifies a third host; use a current authenticated CLI in an isolated repository before updating the matrix.
 
+The user has an authenticated Claude Code Desktop app and will perform the UI steps. A disposable [Desktop smoke kit](docs/claude-desktop-smoke.md) now separates explicit skill use from automatic hook injection, uses project-local settings and an isolated store, and records only hook payload shape. Its local preflight succeeds, but the third-host and live-hook gates remain open until the user runs local Code sessions and reports the observed behavior. The Desktop app uses its own OAuth login path, so the invalid terminal CLI credential does not decide the Desktop result.
+
 The [constructed skill behavior cases](evals/skill-behavior.md) now separate correction capture from ordinary work and pasted transcripts. They are a manual review set, not a passed host evaluation.
 
 ## Stage 2 — close core safety and correctness gaps
