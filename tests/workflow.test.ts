@@ -278,6 +278,25 @@ test('identical applicability abstains on same-scope overlap and prefers project
   assert.doesNotMatch(result, /Keep the screen/);
 });
 
+test('incomparable required contexts abstain when both lessons apply', () => {
+  const f = fixture();
+  const create = (title: string, requires: string) => {
+    const draft = ok(run(f.env, 'capture', '--project', f.a, '--title', title,
+      '--lesson', `Follow ${title}.`, '--when', 'auth', '--requires', requires,
+      '--verify', 'Inspect the auth change'));
+    const id = draft.match(/[0-9a-f-]{36}/)![0];
+    ok(run(f.env, 'approve', id, '--project', f.a));
+  };
+  create('Screen advice', 'screen');
+  create('Component advice', 'layout,component');
+  assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix auth screen')), /Screen advice/);
+  assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix auth layout component')), /Component advice/);
+  assert.equal(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix auth screen layout component')), '');
+  const explanation = JSON.parse(ok(run(f.env, 'explain', '--project', f.a, '--task', 'Fix auth screen layout component')));
+  assert.equal(explanation.length, 2);
+  assert.ok(explanation.every((item: { eligible: boolean; reason: string }) => !item.eligible && item.reason.includes('ambiguous overlap')));
+});
+
 test('required subtask context suppresses a related but different task', () => {
   const f = fixture();
   const capture = (project: string, requires?: string) => {

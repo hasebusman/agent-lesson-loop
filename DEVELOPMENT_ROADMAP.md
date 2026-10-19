@@ -39,6 +39,8 @@ Explicit platform/dependency bounds now suppress technical advice when the conte
 
 A retrieval regression exposed that `explain` could mark a lesson eligible while `search` omitted it when its trigger appeared after the first 30 distinct task words or had one character. Candidate lookup now includes every word in the bounded task input and uses SQLite's [FTS5 column filter](https://sqlite.org/fts5.html#fts5_column_filters) for triggers, so unrelated words in lesson titles and bodies do not expand the candidate set. Synthetic 180-term ASCII and 400-term Unicode tasks and the 10,000-lesson scale run pass locally. This does not resolve semantic conflicts between lessons.
 
+Another overlap regression showed that counting required terms could shadow an applicable lesson even when the two sets of required context were incomparable. The deterministic overlap rule now shadows within a scope only when one set strictly contains the other; otherwise it abstains and `explain` reports ambiguity. This handles explicit applicability relationships, not contradictions in the meaning of lesson text.
+
 The [Node 24 SQLite documentation](https://nodejs.org/download/release/latest-v24.x/docs/api/sqlite.html) still labels `node:sqlite` a release-candidate API. Keep the pinned 24.x runtime and migration/backup tests while the project depends on it. Do not change database engines solely to avoid that label; change if compatibility runs or API churn reveal a concrete failure.
 
 ## Stage 3 — qualify integrations one host at a time

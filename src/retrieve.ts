@@ -9,12 +9,13 @@ function scopePriority(lesson: Lesson): number {
   return lesson.scope.level === 'project' ? 3 : lesson.scope.level === 'stack' ? 2 : 1;
 }
 
-function specificity(lesson: Lesson): number {
-  return scopePriority(lesson) * 100 + lesson.requires.length;
+function strictlyNarrowerRequirements(a: Lesson, b: Lesson): boolean {
+  return a.requires.length > b.requires.length && b.requires.every(term => a.requires.includes(term));
 }
 
-// Identical applicability conditions are ambiguous if more than one lesson
-// occupies the most specific scope. Broader duplicates are shadowed.
+// For shared triggers and exceptions, project scope wins over broader scope.
+// Within one scope, a lesson shadows another only if it requires a strict
+// superset of the other's terms. Incomparable applicable conditions abstain.
 function resolveOverlap(items: Explanation[]): Explanation[] {
   const groups = new Map<string, Explanation[]>();
   for (const item of items) {
@@ -27,15 +28,16 @@ function resolveOverlap(items: Explanation[]): Explanation[] {
   }
   for (const group of groups.values()) {
     if (group.length < 2) continue;
-    const highest = Math.max(...group.map(item => specificity(item.lesson)));
-    const peers = group.filter(item => specificity(item.lesson) === highest);
+    const highestScope = Math.max(...group.map(item => scopePriority(item.lesson)));
+    const scoped = group.filter(item => scopePriority(item.lesson) === highestScope);
+    const peers = scoped.filter(item => !scoped.some(other =>
+      other !== item && strictlyNarrowerRequirements(other.lesson, item.lesson)));
     for (const item of group) {
       if (peers.length === 1 && item === peers[0]) continue;
       item.eligible = false;
       item.rank = 0;
-      item.reason = specificity(item.lesson) < highest
-        ? 'shadowed by a more specific lesson'
-        : `ambiguous overlap with ${peers.filter(peer => peer.lesson.id !== item.lesson.id).map(peer => peer.lesson.id).join(', ')}`;
+      item.reason = peers.length === 1 ? 'shadowed by a more specific lesson'
+        : `ambiguous overlap with ${peers.filter(peer => peer.lesson.id !== item.lesson.id).map(peer => peer.lesson.id).sort().join(', ')}`;
     }
   }
   return items;
