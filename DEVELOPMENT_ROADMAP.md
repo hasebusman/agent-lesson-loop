@@ -22,6 +22,8 @@ An explicit Codex CLI 0.145.0 run in a temporary read-only sandbox read the proj
 
 An isolated Copilot CLI 1.0.77 run discovered and loaded the project skill after explicit invocation. The trace shows `search` and `explain` calls, selection of the approved synthetic auth lesson, suppression for the redesign exception, and no repository edits. This establishes one explicit-use path, not unprompted skill selection or coding benefit. A Gemini CLI 0.1.5 attempt stopped at Google sign-in before model or skill execution and cannot count as a third host result. The next host test needs working authentication and the same trace and unchanged-file checks.
 
+A 2026-10-19 recheck found Claude Code CLI 1.0.90 still reporting `Invalid API key`. Gemini CLI 0.1.5 did not complete a harmless isolated prompt within 25 seconds and did not expose the `gemini skills` management command described in the [current Gemini skills documentation](https://geminicli.com/docs/cli/skills/). The published CLI was 0.64.0 at the time of the check. Neither attempt qualifies a third host; use a current authenticated CLI in an isolated repository before updating the matrix.
+
 The [constructed skill behavior cases](evals/skill-behavior.md) now separate correction capture from ordinary work and pasted transcripts. They are a manual review set, not a passed host evaluation.
 
 ## Stage 2 — close core safety and correctness gaps
@@ -38,6 +40,8 @@ The project-scope regression test confirms that an explicitly remembered app pal
 Explicit platform/dependency bounds now suppress technical advice when the context is unknown or outside a stable numeric version range. Pending revisions expose changed decision fields through `review --diff`. New focused tests cover a concurrent revision race, restoration from a migration backup, and a private output canary across store, export, and hook output. Semantic conflict detection, broader fuzzing, and host qualification remain open.
 
 A legacy-schema fixture now forces migration to fail on malformed data, checks that the v1 schema and rows survive with no partial v2 tables, then repairs the fixture and restores from the next backup. This verifies transaction rollback and recovery from a failed migration; process termination during migration remains untested. A 40-trigger multilingual and phrase corpus also checks that indexed selection agrees with `explain` for eligible lessons.
+
+An adversarial capture case showed that Unicode line separators and direction controls could pass the one-line lesson validator. Input validation now rejects Unicode control, line/paragraph separator, and bidirectional-control characters; the new regression checks rejection before any lesson is stored. This protects the review display boundary without changing retrieval rules.
 
 A retrieval regression exposed that `explain` could mark a lesson eligible while `search` omitted it when its trigger appeared after the first 30 distinct task words or had one character. Candidate lookup now includes every word in the bounded task input and uses SQLite's [FTS5 column filter](https://sqlite.org/fts5.html#fts5_column_filters) for triggers, so unrelated words in lesson titles and bodies do not expand the candidate set. Synthetic 180-term ASCII and 400-term Unicode tasks and the 10,000-lesson scale run pass locally. This does not resolve semantic conflicts between lessons.
 

@@ -48,7 +48,7 @@ const secretPatterns = [
 export function safeText(value: unknown, field: string, max = 500): string {
   if (typeof value !== 'string') throw new Error(`${field} must be text`);
   const trimmed = value.trim();
-  if (!trimmed || trimmed.length > max || /[\r\n\x00-\x1f\x7f]/.test(trimmed)) throw new Error(`${field} must be one line, 1-${max} characters`);
+  if (!trimmed || trimmed.length > max || /[\p{Cc}\p{Zl}\p{Zp}\p{Bidi_Control}]/u.test(trimmed)) throw new Error(`${field} must be one line without control characters, 1-${max} characters`);
   if (secretPatterns.some(pattern => pattern.test(trimmed))) throw new Error(`${field} looks like private data; rewrite it without secrets or identifiers`);
   return trimmed;
 }

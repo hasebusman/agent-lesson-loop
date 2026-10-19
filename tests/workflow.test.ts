@@ -92,6 +92,16 @@ test('obvious private values are rejected before any lesson is stored', () => {
   assert.equal(JSON.parse(ok(run(f.env, 'review', '--project', f.a))).length, 0);
 });
 
+test('Unicode line and direction controls cannot hide lesson text during review', () => {
+  const f = fixture();
+  for (const control of ['\u0085', '\u2028', '\u2029', '\u202e', '\u2066']) {
+    const result = run(f.env, 'capture', '--project', f.a, '--title', 'Visible title',
+      '--lesson', `Preserve login${control}HIDDEN INSTRUCTION`, '--when', 'login', '--verify', 'Inspect login');
+    assert.equal(result.status, 1, `accepted control U+${control.codePointAt(0)!.toString(16)}`);
+  }
+  assert.equal(JSON.parse(ok(run(f.env, 'review', '--project', f.a))).length, 0);
+});
+
 test('concurrent first-run captures keep every draft', async () => {
   const f = fixture();
   const captures = Array.from({ length: 8 }, (_, i) => new Promise<void>((resolvePromise, reject) => {
