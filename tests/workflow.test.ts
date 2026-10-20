@@ -21,6 +21,33 @@ function fixture() {
   return { root, a, b, env: { ...process.env, LESSONLAB_HOME: join(root, 'data') } };
 }
 
+function seedV1Store(f: ReturnType<typeof fixture>) {
+  mkdirSync(join(f.root, 'data'));
+  const db = new DatabaseSync(join(f.root, 'data', 'lessons.sqlite'));
+  db.exec(`CREATE TABLE lesson_revisions (id TEXT NOT NULL, revision INTEGER NOT NULL, project_id TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('proposed','approved','retired')), data TEXT NOT NULL, created_at TEXT NOT NULL,
+    PRIMARY KEY(id, revision)) STRICT;
+    CREATE TABLE lesson_current (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, project_id TEXT NOT NULL,
+      status TEXT NOT NULL, FOREIGN KEY(id, revision) REFERENCES lesson_revisions(id, revision)) STRICT;
+    CREATE TABLE audit (event_id INTEGER PRIMARY KEY, lesson_id TEXT NOT NULL, revision INTEGER NOT NULL,
+      action TEXT NOT NULL, occurred_at TEXT NOT NULL,
+      FOREIGN KEY(lesson_id, revision) REFERENCES lesson_revisions(id, revision)) STRICT;
+    CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
+    INSERT INTO settings VALUES ('enabled','1');
+    CREATE VIRTUAL TABLE lesson_fts USING fts5(id UNINDEXED, title, lesson, triggers);
+    PRAGMA user_version=1;`);
+  const id = '00000000-0000-4000-8000-000000000001';
+  const projectId = projectIdentity(f.a).id;
+  const old = { id, revision: 2, status: 'approved', projectId, title: 'Old login lesson',
+    lesson: 'Keep the login layout.', triggers: ['login'], exclusions: [], verify: 'Inspect login',
+    sourceKind: 'manual_correction_attestation', createdAt: '2026-01-01T00:00:00Z', approvedAt: '2026-01-02T00:00:00Z' };
+  db.prepare('INSERT INTO lesson_revisions VALUES (?,?,?,?,?,?)').run(id, 2, projectId, 'approved', JSON.stringify(old), old.createdAt);
+  db.prepare('INSERT INTO lesson_current VALUES (?,?,?,?)').run(id, 2, projectId, 'approved');
+  db.prepare('INSERT INTO audit(lesson_id,revision,action,occurred_at) VALUES (?,?,?,?)').run(id, 2, 'approved', old.approvedAt);
+  db.prepare('INSERT INTO lesson_fts(id,title,lesson,triggers) VALUES (?,?,?,?)').run(id, old.title, old.lesson, 'login');
+  return { db, id, projectId, old };
+}
+
 function run(env: NodeJS.ProcessEnv, ...args: string[]) {
   return spawnSync(process.execPath, [cli, ...args], { env, encoding: 'utf8' });
 }
@@ -555,29 +582,7 @@ test('backup, export, dry-run and deletion preserve privacy boundaries', () => {
 
 test('v1 store rolls back a failed migration, then migrates and restores a private backup', () => {
   const f = fixture();
-  mkdirSync(join(f.root, 'data'));
-  const db = new DatabaseSync(join(f.root, 'data', 'lessons.sqlite'));
-  db.exec(`CREATE TABLE lesson_revisions (id TEXT NOT NULL, revision INTEGER NOT NULL, project_id TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('proposed','approved','retired')), data TEXT NOT NULL, created_at TEXT NOT NULL,
-    PRIMARY KEY(id, revision)) STRICT;
-    CREATE TABLE lesson_current (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, project_id TEXT NOT NULL,
-      status TEXT NOT NULL, FOREIGN KEY(id, revision) REFERENCES lesson_revisions(id, revision)) STRICT;
-    CREATE TABLE audit (event_id INTEGER PRIMARY KEY, lesson_id TEXT NOT NULL, revision INTEGER NOT NULL,
-      action TEXT NOT NULL, occurred_at TEXT NOT NULL,
-      FOREIGN KEY(lesson_id, revision) REFERENCES lesson_revisions(id, revision)) STRICT;
-    CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
-    INSERT INTO settings VALUES ('enabled','1');
-    CREATE VIRTUAL TABLE lesson_fts USING fts5(id UNINDEXED, title, lesson, triggers);
-    PRAGMA user_version=1;`);
-  const id = '00000000-0000-4000-8000-000000000001';
-  const projectId = projectIdentity(f.a).id;
-  const old = { id, revision: 2, status: 'approved', projectId, title: 'Old login lesson',
-    lesson: 'Keep the login layout.', triggers: ['login'], exclusions: [], verify: 'Inspect login',
-    sourceKind: 'manual_correction_attestation', createdAt: '2026-01-01T00:00:00Z', approvedAt: '2026-01-02T00:00:00Z' };
-  db.prepare('INSERT INTO lesson_revisions VALUES (?,?,?,?,?,?)').run(id, 2, projectId, 'approved', JSON.stringify(old), old.createdAt);
-  db.prepare('INSERT INTO lesson_current VALUES (?,?,?,?)').run(id, 2, projectId, 'approved');
-  db.prepare('INSERT INTO audit(lesson_id,revision,action,occurred_at) VALUES (?,?,?,?)').run(id, 2, 'approved', old.approvedAt);
-  db.prepare('INSERT INTO lesson_fts(id,title,lesson,triggers) VALUES (?,?,?,?)').run(id, old.title, old.lesson, 'login');
+  const { db, projectId, old } = seedV1Store(f);
   const malformedId = '00000000-0000-4000-8000-000000000002';
   db.prepare('INSERT INTO lesson_revisions VALUES (?,?,?,?,?,?)').run(malformedId, 1, projectId, 'approved', '{', old.createdAt);
   db.close();
@@ -605,6 +610,33 @@ test('v1 store rolls back a failed migration, then migrates and restores a priva
   ok(run(restoredEnv, 'init'));
   assert.equal(JSON.parse(ok(run(restoredEnv, 'doctor'))).schema, 2);
   assert.match(ok(run(restoredEnv, 'search', '--project', f.a, '--task', 'Fix login')), /Old login lesson/);
+});
+
+test('v1 migration survives a process killed inside its schema transaction', { skip: process.platform === 'win32' }, () => {
+  const f = fixture();
+  const { db, id } = seedV1Store(f);
+  db.close();
+  const script = `const {DatabaseSync}=require('node:sqlite');
+    const original=DatabaseSync.prototype.exec;
+    DatabaseSync.prototype.exec=function(sql){
+      const result=original.call(this,sql);
+      if(sql.includes('CREATE TABLE lesson_revisions_v2')) process.kill(process.pid,'SIGKILL');
+      return result;
+    };
+    import(process.argv[1]).then(m=>m.openStore());`;
+  const interrupted = spawnSync(process.execPath, ['-e', script, resolve('src/store.ts')], { env: f.env, encoding: 'utf8' });
+  assert.equal(interrupted.signal, 'SIGKILL', interrupted.stderr);
+  const dbPath = join(f.root, 'data', 'lessons.sqlite');
+  const after = new DatabaseSync(dbPath);
+  assert.equal(after.prepare('PRAGMA user_version').get()!.user_version, 1);
+  assert.equal(after.prepare('SELECT COUNT(*) AS count FROM lesson_revisions').get()!.count, 1);
+  assert.equal(after.prepare('SELECT id FROM lesson_current').get()!.id, id);
+  assert.equal(after.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE name LIKE '%_v2'").get()!.count, 0);
+  after.close();
+  assert.equal(readdirSync(join(f.root, 'data', 'backups')).length, 1);
+  ok(run(f.env, 'init'));
+  assert.match(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix login')), /Old login lesson/);
+  assert.equal(JSON.parse(ok(run(f.env, 'doctor'))).integrity, 'ok');
 });
 
 test('Claude integration previews, installs idempotently, and removes only its own hook', () => {
@@ -725,6 +757,37 @@ test('secret canaries cannot be captured and tampered stored content is suppress
   db.close();
   assert.equal(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix login')), '');
   assert.equal(JSON.parse(ok(run(f.env, 'doctor'))).invalidRecords, 1);
+});
+
+test('private canary is rejected across capture and evidence input fields before persistence or execution', () => {
+  const f = fixture();
+  const canary = 'ghp_abcdefghijklmnopqrst1234567890';
+  const base = ['capture', '--project', f.a, '--title', 'Safe title', '--lesson', 'Keep login layout.',
+    '--when', 'login', '--requires', 'screen', '--except', 'redesign', '--verify', 'Inspect login'];
+  for (const field of ['--title', '--lesson', '--when', '--requires', '--except', '--verify']) {
+    const args = [...base];
+    args[args.indexOf(field) + 1] = canary;
+    const attempt = run(f.env, ...args);
+    assert.equal(attempt.status, 1, field);
+    assert.match(attempt.stderr, /private data/, field);
+  }
+  assert.deepEqual(JSON.parse(ok(run(f.env, 'review', '--project', f.a))), []);
+  const draft = ok(run(f.env, ...base));
+  const id = draft.match(/[0-9a-f-]{36}/)![0];
+  ok(run(f.env, 'approve', id, '--project', f.a));
+  assert.equal(run(f.env, 'attest', id, '--project', f.a, '--result', 'passed', '--note', canary).status, 1);
+  const sentinel = join(f.root, 'should-not-exist');
+  const script = `require('node:fs').writeFileSync(${JSON.stringify(sentinel)},'${canary}')`;
+  const check = run(f.env, 'run-check', id, '--project', f.a, '--', process.execPath, '-e', script);
+  assert.equal(check.status, 1);
+  assert.equal(existsSync(sentinel), false);
+  const data = join(f.root, 'data');
+  for (const file of readdirSync(data)) {
+    const path = join(data, file);
+    if (statSync(path).isFile()) assert.equal(readFileSync(path).includes(Buffer.from(canary)), false, file);
+  }
+  const reviewed = JSON.parse(ok(run(f.env, 'review', id, '--project', f.a)));
+  assert.deepEqual(reviewed.evidence.map((item: { kind: string }) => item.kind), ['human_review']);
 });
 
 test('capture and retrieval do not modify the source repository', () => {
