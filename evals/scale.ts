@@ -35,6 +35,7 @@ try {
   durations.sort((a, b) => a - b);
   const hookPath = fileURLToPath(new URL('../bin/hook.ts', import.meta.url));
   const hookDurations: number[] = [];
+  const estimatedContextTokens: number[] = [];
   let maxContextChars = 0;
   for (let i = 0; i < 50; i++) {
     const payload = JSON.stringify({ hook_event_name: 'UserPromptSubmit', cwd: project,
@@ -46,13 +47,19 @@ try {
     const context = JSON.parse(result.stdout).hookSpecificOutput?.additionalContext;
     if (typeof context !== 'string' || !context.includes(`Rule ${(i * 199) % count}`)) throw new Error('Hook returned the wrong lesson during scale evaluation');
     maxContextChars = Math.max(maxContextChars, context.length);
+    // Anthropic's four-English-characters-per-token rule is a rough estimate,
+    // not a tokenizer count or a safe upper bound for arbitrary lesson text.
+    estimatedContextTokens.push(Math.ceil(context.length / 4));
   }
   hookDurations.sort((a, b) => a - b);
+  estimatedContextTokens.sort((a, b) => a - b);
   console.log(JSON.stringify({ corpus: 'synthetic-scale', lessons: count, queries: durations.length,
     setupMs, lookupMs: { p50: durations[24], p95: durations[47] },
     hookProcessMs: { p50: hookDurations[24], p95: hookDurations[47] }, maxContextChars,
+    estimatedContextTokens: { p50: estimatedContextTokens[24], p95: estimatedContextTokens[47], max: estimatedContextTokens.at(-1),
+      method: 'ceil(rendered context UTF-16 code units / 4); rough English-text heuristic, not Claude tokenizer output' },
     runtime: process.version, platform: process.platform, arch: process.arch,
-    limitations: 'Synthetic corpus and local subprocess timing; no live host scheduling, model response, or tokenizer count.' }, null, 2));
+    limitations: 'Synthetic English corpus and local subprocess timing; no live host scheduling, model response, or model-specific token count.' }, null, 2));
 } finally {
   db.close();
   rmSync(root, { recursive: true, force: true });

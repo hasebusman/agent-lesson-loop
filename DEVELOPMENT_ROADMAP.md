@@ -1,6 +1,6 @@
 # Development roadmap
 
-This is the execution order for the open items in [PROJECT_CHECKLIST.md](PROJECT_CHECKLIST.md). Updated 2026-10-19 after checking current primary documentation. A stage closes only when its evidence is recorded; implementing code alone does not close a host or release gate.
+This is the execution order for the open items in [PROJECT_CHECKLIST.md](PROJECT_CHECKLIST.md). Updated 2026-10-20 after checking current primary documentation. A stage closes only when its evidence is recorded; implementing code alone does not close a host or release gate.
 
 ## Working rule
 
@@ -35,7 +35,7 @@ The [constructed skill behavior cases](evals/skill-behavior.md) now separate cor
 3. **Adversarial and state tests:** Add property/fuzz input tests, multiple-process write tests, migration interruption/restore tests, and canaries for private data and prompt injection. Acceptance: invariants hold under generated inputs; failure leaves the store recoverable; no canary appears in database, export, or hook output.
 4. **End-to-end cost:** Measure hook startup, Git identity, database read, selection, and rendered context with a stated machine and 10,000 lessons. Count tokens with the target host tokenizer or record the exact approximation. Acceptance: publish p50/p95 and token distribution, plus negative results. The original sub-millisecond report measures only in-process lookup.
 
-**Progress:** The scale script now measures the complete local hook subprocess. Four [local observations](evals/reports/hook-process-observations.md) yielded 150.9 ms, 98.6 ms, 95.9 ms, and 107.5 ms p95; the target is still unverified because scheduling varied and the runs did not include a live host or tokenizer count.
+**Progress:** The scale script measures the complete local hook subprocess. Five [local observations](evals/reports/hook-process-observations.md) yielded 150.9, 98.6, 95.9, 107.5, and 95.2 ms p95; the target is still unverified because scheduling varied and the runs did not include a live host. The latest [scale report](evals/reports/synthetic-scale.json) records p50/p95/max rendered-context estimates of 80 tokens on synthetic English lessons using `ceil(UTF-16 code units / 4)`. This is a rough heuristic, not a Claude model count; the 300-token gate remains open.
 
 The project-scope regression test confirms that an explicitly remembered app palette is retrieved only in its own repository, including when another repository shares the stack. The portable skill states this boundary and does not encode the palette as a general rule. The first evidence-model increment now distinguishes human review, developer reports, and explicitly run check results. Failed and unknown exits keep their labels; output is discarded, and a content revision does not carry a prior observed check forward as current proof. [ADR 0002](docs/adr/0002-explicit-check-evidence.md) records why existing immutable revisions and schema v2 were reused without a database migration. Full provenance/security review remains open.
 
@@ -43,7 +43,7 @@ Known contradictory lessons with different triggers, exceptions, and required te
 
 Explicit platform/dependency bounds now suppress technical advice when the context is unknown or outside a stable numeric version range. Pending revisions expose changed decision fields through `review --diff`. New focused tests cover a concurrent revision race, restoration from a migration backup, and a private output canary across store, export, and hook output. Semantic conflict detection, broader fuzzing, and host qualification remain open.
 
-A legacy-schema fixture now forces migration to fail on malformed data, checks that the v1 schema and rows survive with no partial v2 tables, then repairs the fixture and restores from the next backup. This verifies transaction rollback and recovery from a failed migration; process termination during migration remains untested. A 40-trigger multilingual and phrase corpus also checks that indexed selection agrees with `explain` for eligible lessons.
+A legacy-schema fixture forces migration to fail on malformed data, checks that the v1 schema and rows survive with no partial v2 tables, then repairs the fixture and restores from the next backup. This verifies transaction rollback and recovery from a failed migration. The separate process-kill test below covers termination inside the schema transaction. A 40-trigger multilingual and phrase corpus also checks that indexed selection agrees with `explain` for eligible lessons.
 
 An adversarial capture case showed that Unicode line separators and direction controls could pass the one-line lesson validator. Input validation now rejects Unicode control, line/paragraph separator, and bidirectional-control characters; the regression checks rejection before any lesson is stored. A further canary test checks every capture text field, developer attestation notes, and command arguments; rejected values remain absent from store files and an invalid command is never run. These cases strengthen the known-pattern boundary but cannot prove detection of unknown secret formats.
 
