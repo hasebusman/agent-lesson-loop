@@ -759,6 +759,41 @@ test('secret canaries cannot be captured and tampered stored content is suppress
   assert.equal(JSON.parse(ok(run(f.env, 'doctor'))).invalidRecords, 1);
 });
 
+test('unknown or malformed stored metadata cannot leak through lookup or export', () => {
+  const f = fixture();
+  const draft = ok(run(f.env, 'capture', '--project', f.a, '--title', 'Safe login',
+    '--lesson', 'Keep layout.', '--when', 'login', '--verify', 'Inspect layout'));
+  const id = draft.match(/[0-9a-f-]{36}/)![0];
+  ok(run(f.env, 'approve', id, '--project', f.a));
+  const db = new DatabaseSync(join(f.root, 'data', 'lessons.sqlite'));
+  const row = db.prepare('SELECT data FROM lesson_revisions WHERE id=? AND revision=2').get(id) as { data: string };
+  const original = JSON.parse(row.data);
+  const canary = 'ghp_abcdefghijklmnopqrst1234567890';
+  const mutations: Array<(lesson: Record<string, unknown>) => void> = [
+    lesson => { lesson.privateNote = canary; },
+    lesson => { (lesson.scope as Record<string, unknown>).privateNote = canary; },
+    lesson => { (lesson.evidence as Array<Record<string, unknown>>)[0].privateNote = canary; },
+    lesson => { lesson.createdAt = canary; },
+    lesson => { lesson.approvedAt = canary; },
+    lesson => { lesson.supersedes = [canary]; },
+    lesson => { lesson.triggers = [123]; },
+  ];
+  for (const [index, mutate] of mutations.entries()) {
+    const poisoned = structuredClone(original);
+    mutate(poisoned);
+    db.prepare('UPDATE lesson_revisions SET data=? WHERE id=? AND revision=2').run(JSON.stringify(poisoned), id);
+    assert.equal(ok(run(f.env, 'search', '--project', f.a, '--task', 'Fix login')), '', `case ${index}`);
+    const review = run(f.env, 'review', id, '--project', f.a);
+    assert.equal(review.status, 1, `case ${index}`);
+    assert.equal(`${review.stdout}${review.stderr}`.includes(canary), false, `case ${index}`);
+    const output = join(f.root, `metadata-export-${index}.json`);
+    ok(run(f.env, 'export', '--project', f.a, '--output', output));
+    assert.equal(readFileSync(output, 'utf8').includes(canary), false, `case ${index}`);
+    assert.equal(JSON.parse(ok(run(f.env, 'doctor'))).invalidRecords, 1, `case ${index}`);
+  }
+  db.close();
+});
+
 test('private canary is rejected across capture and evidence input fields before persistence or execution', () => {
   const f = fixture();
   const canary = 'ghp_abcdefghijklmnopqrst1234567890';

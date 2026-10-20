@@ -5,7 +5,7 @@ The main assets are the private lesson store, developer intent, host configurati
 | Risk | Control and evidence | Residual limitation |
 |---|---|---|
 | Prompt injection in stored lessons | One-line structured fields, review before approval, revalidation on read, advisory rendering | A developer can still approve harmful advice; hash is not authenticated |
-| Secret or personal data retention | Short summaries, common-pattern rejection across capture/evidence fields, canary tests, no chat or source capture | Unknown secret formats can pass; plaintext store |
+| Secret or personal data retention | Short summaries, common-pattern rejection across capture/evidence fields, strict stored-record field and metadata validation on read, canary tests, no chat or source capture | Unknown secret formats can pass in allowed free-text fields; plaintext store |
 | False test claims | Developer reports and actual CLI-run exit results have different evidence kinds; output is discarded; content edits retire current check claims | Local database writes are not authenticated; a process with database write access can forge records |
 | Cross-project contamination | Canonical Git common-directory identity, scope gate before retrieval, project isolation tests | Monorepo packages share one identity; deliberate broad promotion crosses projects |
 | Stale or conflicting advice | Expiry, explicit version/platform bounds with unknown-context abstention, exceptions, and conservative abstention for identical or incomparable required contexts at the same scope | Versions are caller-supplied stable triples; no automatic detection or semantic contradiction detector |
@@ -15,3 +15,5 @@ The main assets are the private lesson store, developer intent, host configurati
 | Supply chain | Two development dependencies, lockfile, SHA-pinned CI actions, [point-in-time dependency review](dependency-review.md) | No published artifact provenance or external audit yet |
 
 No automatic observation, model extraction, telemetry or network synchronization is implemented. Checks run only through an explicit CLI command. The v0.1 archive is absent, so its importer contract cannot be verified. The synthetic suite must not be used to certify production security or effectiveness.
+
+The read boundary rejects a stored revision with unexpected JSON fields, malformed dates, invalid applicability terms, or unrecognized evidence metadata. This prevents those fields from appearing in lookup, review, or project export. It does not authenticate the database or detect every sensitive value in otherwise valid lesson text.

@@ -46,6 +46,16 @@ const secretPatterns = [
   /https?:\/\/[^\s/@]+:[^\s/@]+@/i,
 ];
 
+function onlyKeys(value: object, allowed: readonly string[]): boolean {
+  return Object.keys(value).every(key => allowed.includes(key));
+}
+
+function timestamp(value: unknown): boolean {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 19) === value.slice(0, 19);
+}
+
 export function safeText(value: unknown, field: string, max = 500): string {
   if (typeof value !== 'string') throw new Error(`${field} must be text`);
   const trimmed = value.trim();
@@ -179,11 +189,17 @@ export function upgradeLesson(raw: Record<string, unknown>): Lesson {
 }
 
 export function validateLesson(lesson: Lesson): void {
+  if (!lesson || typeof lesson !== 'object' || Array.isArray(lesson) || !onlyKeys(lesson, [
+    'schemaVersion', 'id', 'revision', 'status', 'type', 'projectId', 'scope', 'environment',
+    'title', 'lesson', 'triggers', 'requires', 'exclusions', 'verify', 'sourceKind',
+    'createdAt', 'approvedAt', 'expiresAt', 'supersedes', 'conflicts', 'hash', 'evidence', 'confidence',
+  ])) throw new Error('Invalid lesson fields');
   if (lesson.schemaVersion !== 2 || !/^[0-9a-f-]{36}$/.test(lesson.id) || !Number.isSafeInteger(lesson.revision) || lesson.revision < 1) throw new Error('Invalid lesson identity');
   if (!/^[0-9a-f]{64}$/.test(lesson.projectId)) throw new Error('Invalid project identity');
   if (!['proposed', 'approved', 'rejected', 'retired'].includes(lesson.status)) throw new Error('Invalid lesson status');
   if (!['preference', 'workflow', 'diagnostic', 'technical_fact', 'known_pitfall'].includes(lesson.type)) throw new Error('Invalid lesson type');
-  if (!lesson.scope || !['project', 'stack', 'global'].includes(lesson.scope.level)) throw new Error('Invalid lesson scope');
+  if (!lesson.scope || typeof lesson.scope !== 'object' || Array.isArray(lesson.scope) || !['project', 'stack', 'global'].includes(lesson.scope.level) ||
+    !onlyKeys(lesson.scope, lesson.scope.level === 'stack' ? ['level', 'stack'] : ['level'])) throw new Error('Invalid lesson scope');
   if (lesson.scope.level === 'stack') safeText(lesson.scope.stack, 'stack', 80);
   if (lesson.environment !== undefined) {
     if (!lesson.environment || typeof lesson.environment !== 'object' || Array.isArray(lesson.environment) ||
@@ -199,25 +215,35 @@ export function validateLesson(lesson: Lesson): void {
   safeText(lesson.lesson, 'lesson');
   safeText(lesson.verify, 'verify', 300);
   if (!Array.isArray(lesson.triggers) || !Array.isArray(lesson.requires) || !Array.isArray(lesson.exclusions)) throw new Error('Invalid applicability terms');
+  if (lesson.triggers.some(term => typeof term !== 'string') || lesson.requires.some(term => typeof term !== 'string') ||
+    lesson.exclusions.some(term => typeof term !== 'string')) throw new Error('Invalid applicability terms');
   if (!Array.isArray(lesson.conflicts) || lesson.conflicts.length > 12 || lesson.conflicts.some(id => typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id) || id === lesson.id) || new Set(lesson.conflicts).size !== lesson.conflicts.length) throw new Error('Invalid conflict links');
-  parseTerms(lesson.triggers.join(','), 'when', true);
-  if (lesson.requires.length) parseTerms(lesson.requires.join(','), 'requires');
-  if (lesson.exclusions.length) parseTerms(lesson.exclusions.join(','), 'except');
-  if (lesson.expiresAt !== null && (typeof lesson.expiresAt !== 'string' || Number.isNaN(Date.parse(lesson.expiresAt)))) throw new Error('Invalid expiry');
+  if (!isDeepStrictEqual(parseTerms(lesson.triggers.join(','), 'when', true), lesson.triggers) ||
+    !isDeepStrictEqual(lesson.requires.length ? parseTerms(lesson.requires.join(','), 'requires') : [], lesson.requires) ||
+    !isDeepStrictEqual(lesson.exclusions.length ? parseTerms(lesson.exclusions.join(','), 'except') : [], lesson.exclusions)) throw new Error('Invalid applicability terms');
+  if (!timestamp(lesson.createdAt) || lesson.approvedAt !== null && !timestamp(lesson.approvedAt) ||
+    lesson.status === 'approved' && lesson.approvedAt === null) throw new Error('Invalid lesson dates');
+  if (lesson.expiresAt !== null && !timestamp(lesson.expiresAt)) throw new Error('Invalid expiry');
+  if (!Array.isArray(lesson.supersedes) || lesson.supersedes.length > 12 ||
+    lesson.supersedes.some(id => typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id))) throw new Error('Invalid supersedes links');
+  if (lesson.confidence !== 'draft' && lesson.confidence !== 'reviewed') throw new Error('Invalid confidence');
   if (lesson.sourceKind !== 'manual_correction_attestation' || !Array.isArray(lesson.evidence)) throw new Error('Invalid provenance');
   for (const e of lesson.evidence) {
-    if (!e || typeof e !== 'object' || typeof e.at !== 'string' || Number.isNaN(Date.parse(e.at))) throw new Error('Invalid evidence timestamp');
+    if (!e || typeof e !== 'object' || Array.isArray(e) || !timestamp(e.at)) throw new Error('Invalid evidence timestamp');
     if (e.kind === 'human_review') {
-      if (e.result !== 'accepted') throw new Error('Invalid review evidence');
+      if (e.result !== 'accepted' || !onlyKeys(e, ['kind', 'result', 'at'])) throw new Error('Invalid review evidence');
     } else if (e.kind === 'developer_attestation') {
-      if (!['passed', 'failed', 'unknown'].includes(e.result) || !/^[0-9a-f]{64}$/.test(e.contentHash)) throw new Error('Invalid developer attestation');
+      if (!['passed', 'failed', 'unknown'].includes(e.result) || !/^[0-9a-f]{64}$/.test(e.contentHash) ||
+        !onlyKeys(e, ['kind', 'result', 'note', 'at', 'contentHash'])) throw new Error('Invalid developer attestation');
       safeText(e.note, 'attestation note', 300);
     } else if (e.kind === 'machine_check') {
-      if (!['passed', 'failed', 'unknown'].includes(e.result) || !/^[0-9a-f]{64}$/.test(e.contentHash)) throw new Error('Invalid machine check');
+      if (!['passed', 'failed', 'unknown'].includes(e.result) || !/^[0-9a-f]{64}$/.test(e.contentHash) ||
+        !onlyKeys(e, ['kind', 'result', 'command', 'environment', 'exitCode', 'outputBytes', 'at', 'contentHash'])) throw new Error('Invalid machine check');
       if (!Number.isSafeInteger(e.outputBytes) || e.outputBytes < 0) throw new Error('Invalid output byte count');
       if (!Array.isArray(e.command) || !e.command.length || e.command.length > 64) throw new Error('Invalid check command');
       for (const arg of e.command) safeText(arg, 'command argument', 300);
-      if (!e.environment || typeof e.environment !== 'object') throw new Error('Invalid check environment');
+      if (!e.environment || typeof e.environment !== 'object' || Array.isArray(e.environment) ||
+        !onlyKeys(e.environment, ['platform', 'arch', 'node'])) throw new Error('Invalid check environment');
       safeText(e.environment.platform, 'platform', 80);
       safeText(e.environment.arch, 'architecture', 80);
       safeText(e.environment.node, 'runtime', 80);
